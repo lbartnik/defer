@@ -1,0 +1,19 @@
+Package: defer
+Type: Package
+Title: Defer function evaluation.
+Version: 0.1
+Date: 2015-12-21
+Author: Lukasz A. Bartnik <l.bartnik@gmail.com>
+Maintainer: Lukasz A. Bartnik <l.bartnik@gmail.com>
+Description: Serialize a function/code together with its
+    dependencies in a way that enables future evaluation, possibly
+    on a remote host.
+License: GPL3
+Imports:
+    lazyeval,
+    parallel
+Suggests:
+    testthat,
+    knitr
+VignetteBuilder: knitr
+RoxygenNote: 5.0.1

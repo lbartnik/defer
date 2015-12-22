@@ -1,0 +1,33 @@
+---
+title: "Sample usage"
+author: "Lukasz A. Bartnik"
+date: "December 21, 2015"
+output: html_document
+---
+
+Here are samples of how the `defer` package is intended to be used:
+
+## Interactive interface
+
+Interactive use assumes that most of the symbols referred by the user
+are defined in the global environment.
+
+```{r}
+pkg <- package(fun)
+evaluate(pkg, 'opencpu://localhost:8000')
+```
+
+
+## Programming interface
+
+Here the function is resolved within `run_remote` and not globally.
+
+```{r}
+run_remote <- function (fun, data) {
+  srv <- 'opencpu://localhost:8080'
+  pkg <- package_(fun)
+  res <- evaluate(fun, data, srv)
+  res
+}
+```
+
