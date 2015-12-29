@@ -10,8 +10,12 @@ Description: Serialize a function/code together with its
     on a remote host.
 License: GPL3
 Imports:
+    R6,
+    base64enc,
+    httr,
     lazyeval,
-    parallel
+    parallel,
+    stringi
 Suggests:
     testthat,
     knitr
