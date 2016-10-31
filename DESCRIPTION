@@ -10,8 +10,11 @@ Description: Serialize a function/code together with its
     on a remote host.
 License: GPL3
 Imports:
+Collate:
+    'package.R'
 Suggests:
-    testthat,
-    knitr
+    knitr,
+    mockery,
+    testthat
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
