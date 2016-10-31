@@ -51,6 +51,25 @@ list_functions <- function (pkg)
 
 
 
+#' \code{list_dependencies} returns a \code{character} vector of
+#' function names that come from other R packages. Each function
+#' name (vector value) has a corresponding package name set in
+#' \code{\link{names}}.
+#'
+#' @return \code{list_dependencies} returns a named vector of
+#' functions that belong to other R packages.
+#'
+#' @export
+#' @rdname package
+#'
+list_dependencies <- function (pkg)
+{
+  stopifnot(is_execution_package(pkg))
+  return(character(0))
+}
+
+
+
 #' Run a function from the execution package.
 #'
 #' @param pkg Execution package object.

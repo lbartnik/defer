@@ -2,6 +2,7 @@
 % Please edit documentation in R/package.R
 \name{package_}
 \alias{is_execution_package}
+\alias{list_dependencies}
 \alias{list_functions}
 \alias{package_}
 \title{Create an execution package.}
@@ -11,6 +12,8 @@ package_(entry, ..., .funcs)
 is_execution_package(x)
 
 list_functions(pkg)
+
+list_dependencies(pkg)
 }
 \arguments{
 \item{entry}{Entry-point function or a function name.}
@@ -29,6 +32,9 @@ An execution package object.
 \code{TRUE} or \code{FALSE}.
 
 A vector of function names.
+
+\code{list_dependencies} returns a named vector of
+functions that belong to other R packages.
 }
 \description{
 If the entry-point function \code{entry} need to be called by a
@@ -41,6 +47,11 @@ is an execution package.
 
 \code{list_functions} returns a \code{character} vector
 of names of functions packaged in \code{pkg}.
+
+\code{list_dependencies} returns a \code{character} vector of
+function names that come from other R packages. Each function
+name (vector value) has a corresponding package name set in
+\code{\link{names}}.
 }
 \seealso{
 \code{\link{run_package}}
