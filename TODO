@@ -1,0 +1,5 @@
+* faza 1: zapakowac, odtworzyc, uruchomic
+* faza 2: wydobyc zaleznosci i je tez zapakowac
+* uwaga 3: czy wydobywac zaleznosci (z bibliotek) juz w package_() czy
+  tylko w package() ?
+* jaki interfejs opisywania pkg? summary? print? toString?
