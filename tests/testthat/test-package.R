@@ -50,6 +50,28 @@ test_that("library functions are not packaged but recorded", {
 })
 
 
+# --- passing functions through .funcs ---------------------------------
+
+test_that("functions can be passed by .funcs", {
+  pkg <- package_(function(x)f(x), .funcs = list(f = function(y)summary(y)))
+
+  expect_true(is_execution_package(pkg))
+  expect_equal(list_functions(pkg), c('entry', 'f'))
+  expect_equal(run_package(pkg, iris), summary(iris))
+})
+
+
+test_that("handling errors in .funcs", {
+  # unnamed
+  expect_error(package_(function(){}, .funcs = list(function(){})),
+               "all elements in .funcs need to be named")
+
+  # not a function
+  expect_error(package_(function(){}, .funcs = list(f = 1)),
+               "only functions can be passed via .funcs")
+})
+
+
 # --- execution --------------------------------------------------------
 
 test_that("package can be executed", {
@@ -85,7 +107,7 @@ test_that("named entry function can be executed", {
 })
 
 
-# --- complex execution -------------------------------------------------
+# --- complex execution ------------------------------------------------
 
 test_that("functions can execute each other", {
   m <- mock(1)

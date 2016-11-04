@@ -15,7 +15,7 @@
 #' @rdname package
 #' @seealso \code{\link{run_package}}
 #'
-package_ <- function (entry, ..., .funcs)
+package_ <- function (entry, ..., .funcs, .extract = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
   structure(list(), class = 'execution_package')
