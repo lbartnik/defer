@@ -23,12 +23,15 @@ package_ <- function (entry, ..., .funcs, .extract = FALSE)
   ellipsis <- eval(substitute(alist(...)))
   ellipsis <- make_all_named(ellipsis)
 
+  eval_env <- parent.frame()
+  ellipsis <- lapply(ellipsis, function(x)eval(x, envir = eval_env))
+
   # prepare .funcs
   if (!missing(.funcs)) {
     if (!is_all_functions(.funcs)) {
       stop("only functions can be passed via .funcs", call. = FALSE)
     }
-    if (is_all_named(.funcs)) {
+    if (!is_all_named(.funcs)) {
       stop("all elements in .funcs need to be named", call. = FALSE)
     }
   }
@@ -43,21 +46,50 @@ package_ <- function (entry, ..., .funcs, .extract = FALSE)
 
   functions <- c(ellipsis, .funcs)
 
+  # split functions and library dependencies
+  id <- vapply(functions, is_library_dependency, logical(1))
+  dependencies <- functions[id]
+  functions <- functions[!id]
+
+  # turn dependencies into names + pkg names
+  if (length(dependencies) > 0) {
+    dep_pkgs <- vapply(dependencies, function(x) environmentName(environment(x)),
+                       character(1))
+    dependencies <- names(dependencies)
+    names(dependencies) <- dep_pkgs
+  }
+  else {
+    dependencies <- character()
+  }
+
   # entry
   if (is.character(entry)) {
     if ( !(entry %in% names(functions)) ) {
-      stop("unknown function named entry passed via `entry`", call. = FALSE)
+      stop("unknown function name passed via `entry`", call. = FALSE)
     }
 
-    entry <- substitute(function(...)X(...), list(X = as.name(entry)))
+    # entry is a simple function that passes all args to the actual
+    # entry function specified here by name
+    entry <- eval(substitute(function(...)X(...), list(X = as.name(entry))))
+    environment(entry) <- emptyenv()
   }
   else {
     stopifnot(is.function(entry))
   }
 
+  # remove environment from a function unless it's a closure
+  functions <- c(list(entry = entry), functions)
+  functions <- lapply(functions, function (f) {
+    if (identical(environment(f), globalenv()))
+      environment(f) <- emptyenv()
+    f
+  })
+
   # return the package object
-  structure(list(functions = c(list(entry = entry), functions)),
-            class = 'execution_package')
+  structure(
+    list(functions = functions, dependencies = dependencies),
+    class = 'execution_package'
+  ) # structure
 }
 
 
@@ -82,6 +114,13 @@ is_all_named <- function (objs)
   (length(objs) == 0) ||
     (!is.null(names(objs)) && all(names(objs) != ""))
 }
+
+
+is_library_dependency <- function (x)
+{
+  isNamespace(environment(x))
+}
+
 
 
 
@@ -128,7 +167,7 @@ list_functions <- function (pkg)
 list_dependencies <- function (pkg)
 {
   stopifnot(is_execution_package(pkg))
-  return(character(0))
+  return(pkg$dependencies)
 }
 
 
@@ -145,5 +184,26 @@ list_dependencies <- function (pkg)
 #'
 run_package <- function (pkg, ..., .fun = 'entry')
 {
+  stopifnot(is_execution_package(pkg))
+  stopifnot(.fun %in% names(pkg$functions))
 
+  # create the execution environment
+  exec_env <- new.env(parent = parent.frame(2))
+
+  # make sure each function will search in exec_env by setting either
+  # it parent (regular functions) or grandparent (closures) to exec_env
+  mapply(function(f, n) {
+    # do not remove environment from a closure; package_ sets env
+    # to emptyenv() unless it's a closure
+    if (identical(environment(f), emptyenv()))
+      environment(f) <- exec_env
+    else
+      parent.env(environment(f)) <- exec_env
+
+    assign(n, f, envir = exec_env)
+    T
+  }, f = pkg$functions, n = names(pkg$functions))
+
+  # make the call and pass arguments
+  do.call(.fun, list(...), envir = exec_env)
 }
