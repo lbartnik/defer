@@ -7,7 +7,7 @@
 \alias{package_}
 \title{Create an execution package.}
 \usage{
-package_(entry, ..., .funcs)
+package_(entry, ..., .funcs, .extract = FALSE)
 
 is_execution_package(x)
 

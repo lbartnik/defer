@@ -18,8 +18,71 @@
 package_ <- function (entry, ..., .funcs, .extract = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
-  structure(list(), class = 'execution_package')
+
+  # prepare ellipsis
+  ellipsis <- eval(substitute(alist(...)))
+  ellipsis <- make_all_named(ellipsis)
+
+  # prepare .funcs
+  if (!missing(.funcs)) {
+    if (!is_all_functions(.funcs)) {
+      stop("only functions can be passed via .funcs", call. = FALSE)
+    }
+    if (is_all_named(.funcs)) {
+      stop("all elements in .funcs need to be named", call. = FALSE)
+    }
+  }
+  else {
+    .funcs <- list()
+  }
+
+  # rule out overlaps
+  if (length(intersect(names(ellipsis), names(.funcs))) > 0) {
+    stop("names in ... and .funcs cannot overlap", call. = FALSE)
+  }
+
+  functions <- c(ellipsis, .funcs)
+
+  # entry
+  if (is.character(entry)) {
+    if ( !(entry %in% names(functions)) ) {
+      stop("unknown function named entry passed via `entry`", call. = FALSE)
+    }
+
+    entry <- substitute(function(...)X(...), list(X = as.name(entry)))
+  }
+  else {
+    stopifnot(is.function(entry))
+  }
+
+  # return the package object
+  structure(list(functions = c(list(entry = entry), functions)),
+            class = 'execution_package')
 }
+
+
+make_all_named <- function (args)
+{
+  if (!is_all_named(args)) {
+    stop("all objects passed via ... need to be named", call. = FALSE)
+  }
+
+  args
+}
+
+
+is_all_functions <- function (objs)
+{
+  all(vapply(objs, is.function, logical(1)))
+}
+
+
+is_all_named <- function (objs)
+{
+  (length(objs) == 0) ||
+    (!is.null(names(objs)) && all(names(objs) != ""))
+}
+
 
 
 #' @description \code{is_execution_package} verifies if the given object
@@ -46,7 +109,7 @@ is_execution_package <- function (x) inherits(x, 'execution_package')
 list_functions <- function (pkg)
 {
   stopifnot(is_execution_package(pkg))
-  return(character(0))
+  return(names(pkg$functions))
 }
 
 

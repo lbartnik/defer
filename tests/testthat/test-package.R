@@ -26,9 +26,10 @@ test_that("entry can be name of a function", {
 
   pkg <- package_(entry = 'f', f = f)
   expect_true(is_execution_package(pkg))
-  expect_equal(list_functions(pkg), 'f')
+  expect_equal(list_functions(pkg), c('entry', 'f'))
 
-  expect_error(package_(entry = 'f', g = f))
+  expect_error(package_(entry = 'f', g = f),
+               "unknown function named entry passed via `entry`")
 })
 
 
@@ -50,6 +51,15 @@ test_that("library functions are not packaged but recorded", {
 })
 
 
+test_that("%>% is recognized as regular dependency", {
+  skip_if_not_installed("magrittr")
+
+  pkg <- package_(function(){}, f = . %>% summary(.))
+
+  expect_true(is_execution_package(pkg))
+  expect_equal(list_functions(pkg), c('entry', 'f'))
+})
+
 # --- passing functions through .funcs ---------------------------------
 
 test_that("functions can be passed by .funcs", {
@@ -69,6 +79,25 @@ test_that("handling errors in .funcs", {
   # not a function
   expect_error(package_(function(){}, .funcs = list(f = 1)),
                "only functions can be passed via .funcs")
+
+  # name conflict
+  expect_error(package_(function(){}, f = function(){}, .funcs = list(f = function(){})),
+               "names in ... and .funcs cannot overlap")
+})
+
+
+# --- unnamed library hints --------------------------------------------
+
+test_that("unnamed symbols can be passed in ...", {
+  skip("this functionality is not yet implemented")
+
+  # TODO to implement make a change in make_all_named()
+
+  pkg <- package_(function(x)summary(x), summary)
+
+  expect_true(is_execution_package(pkg))
+  expect_equal(list_functions(pkg), 'entry')
+  expect_equal(list_dependencies(pkg, c(base = 'summary')))
 })
 
 
