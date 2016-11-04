@@ -151,3 +151,13 @@ test_that("functions can execute each other", {
   expect_args(m, 1, 1, 2)
 })
 
+
+# --- loading libraries ------------------------------------------------
+
+test_that("libraries are loaded and set up", {
+  # TODO libraries need to be either loaded in the same order as
+  #      it was upon package creation or just symbols referred to in
+  #      the package need to be present
+})
+
+
