@@ -85,6 +85,9 @@ package_ <- function (entry, ..., .funcs, .extract = FALSE)
     f
   })
 
+  # TODO should return a self-contained function that can be run even
+  #      without the `defer` package installed
+  # TODO it can be called a class(f) == c("deferred", "function")
   # return the package object
   structure(
     list(functions = functions, dependencies = dependencies),
