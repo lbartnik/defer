@@ -1,50 +1,62 @@
 
-#' Create an execution package.
-#'
-#' If the entry-point function \code{entry} need to be called by a
-#' different name in one of the other functions being packaged,
-#' entry can be set to that name and the function itself can be
-#' passed under its actual name.
+#' Defer function execution - create an execution package.
 #'
 #' @param entry Entry-point function or a function name.
-#' @param ... Other function to be packaged.
-#' @param .funcs A list of functions.
-#' @return An execution package object.
+#' @param ... List of dependencies, functions and variables.
+#' @param functions A list of functions.
+#' @param variables A list of variables.
+#' @return A deferred function object.
 #'
 #' @export
 #' @rdname package
-#' @seealso \code{\link{run_package}}
+#' @seealso \code{\link[defer]{execute}}
 #'
-package_ <- function (entry, ..., .funcs, .extract = FALSE)
+defer_ <- function (entry, ..., functions = list(), variables = list())
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
-  # prepare ellipsis
+  # entry must be a regular function
+  stopifnot(is.function(entry))
+  stopifnot(is.list(functions), is.list(variables))
+  
+  # do not use list(...) because functions might be pointed by
+  # names, e.g. defer(f, summary); in that case we first extract
+  # the name (with make_all_named), and later the package name
   ellipsis <- eval(substitute(alist(...)))
   ellipsis <- make_all_named(ellipsis)
 
+  # now extract the actual object
   eval_env <- parent.frame()
   ellipsis <- lapply(ellipsis, function(x)eval(x, envir = eval_env))
 
-  # prepare .funcs
-  if (!missing(.funcs)) {
-    if (!is_all_functions(.funcs)) {
-      stop("only functions can be passed via .funcs", call. = FALSE)
+  # prepare `functions`; only actual functions are allowed
+  if (length(functions)) {
+    if (!is_all_functions(functions)) {
+      stop("only function objects can be passed via `functions`", call. = FALSE)
     }
-    if (!is_all_named(.funcs)) {
-      stop("all elements in .funcs need to be named", call. = FALSE)
+    if (!is_all_named(functions)) {
+      stop("all elements in `functions` must to be named", call. = FALSE)
     }
-  }
-  else {
-    .funcs <- list()
   }
 
-  # rule out overlaps
-  if (length(intersect(names(ellipsis), names(.funcs))) > 0) {
-    stop("names in ... and .funcs cannot overlap", call. = FALSE)
+  # prepare `variables`; all objects are allowed
+  if (length(variables)) {
+    if (!is_all_named(variables)) {
+      stop("all elements in `variables` must to be named", call. = FALSE)
+    }
+  }
+  
+  # no overlaps are allowed
+  if (!is_empty(intersect(names(ellipsis), names(functions))) ||
+      !is_empty(intersect(names(ellipsis), names(variables))) ||
+      !is_empty(intersect(names(functions), names(variables))))
+  {
+    stop("no overlaps between names in ..., `functions` and `variables` are allowed",
+         call. = FALSE)
   }
 
-  functions <- c(ellipsis, .funcs)
+  # put all dependencies together and then extract each category one by one
+  dependencies <- c(ellipsis, functions, variables)
 
   # split functions and library dependencies
   id <- vapply(functions, is_library_dependency, logical(1))
@@ -60,21 +72,6 @@ package_ <- function (entry, ..., .funcs, .extract = FALSE)
   }
   else {
     dependencies <- character()
-  }
-
-  # entry
-  if (is.character(entry)) {
-    if ( !(entry %in% names(functions)) ) {
-      stop("unknown function name passed via `entry`", call. = FALSE)
-    }
-
-    # entry is a simple function that passes all args to the actual
-    # entry function specified here by name
-    entry <- eval(substitute(function(...)X(...), list(X = as.name(entry))))
-    environment(entry) <- emptyenv()
-  }
-  else {
-    stopifnot(is.function(entry))
   }
 
   # remove environment from a function unless it's a closure

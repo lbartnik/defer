@@ -1,11 +1,11 @@
-context("package")
+context("packaging")
 
 
 # --- packaging --------------------------------------------------------
 
 test_that("execution package is returned and function can be listed", {
   f   <- function(){}
-  pkg <- package_(f)
+  pkg <- defer_(f)
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), 'entry')
 })
@@ -14,22 +14,10 @@ test_that("execution package is returned and function can be listed", {
 test_that("multiple functions can be packaged", {
   f <- function(x)x*x
   g <- function(a)sqrt(a)
-  pkg <- package_(f, g = g)
+  pkg <- defer_(f, g = g)
 
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), c('entry', 'g'))
-})
-
-
-test_that("entry can be name of a function", {
-  f <- function(){}
-
-  pkg <- package_(entry = 'f', f = f)
-  expect_true(is_execution_package(pkg))
-  expect_equal(list_functions(pkg), c('entry', 'f'))
-
-  expect_error(package_(entry = 'f', g = f),
-               "unknown function name passed via `entry`")
 })
 
 
@@ -37,13 +25,13 @@ test_that("only named functions are allowed", {
   f <- function(x)x*x
   g <- function(a)sqrt(a)
 
-  expect_error(package_(f, g))
-  expect_error(package_(f, 1))
+  expect_error(defer_(f, g))
+  expect_error(defer_(f, 1))
 })
 
 
 test_that("library functions are not packaged but recorded", {
-  pkg <- package_(function(){}, summary = summary)
+  pkg <- defer_(function(){}, summary = summary)
 
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), 'entry')
@@ -54,7 +42,7 @@ test_that("library functions are not packaged but recorded", {
 test_that("%>% is recognized as regular dependency", {
   skip_if_not_installed("magrittr")
 
-  pkg <- package_(function(){}, f = . %>% summary(.))
+  pkg <- defer_(function(){}, f = . %>% summary(.))
 
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), c('entry', 'f'))
@@ -63,7 +51,7 @@ test_that("%>% is recognized as regular dependency", {
 # --- passing functions through .funcs ---------------------------------
 
 test_that("functions can be passed by .funcs", {
-  pkg <- package_(function(x)f(x), .funcs = list(f = function(y)summary(y)))
+  pkg <- defer_(function(x)f(x), .funcs = list(f = function(y)summary(y)))
 
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), c('entry', 'f'))
@@ -73,15 +61,15 @@ test_that("functions can be passed by .funcs", {
 
 test_that("handling errors in .funcs", {
   # unnamed
-  expect_error(package_(function(){}, .funcs = list(function(){})),
+  expect_error(defer_(function(){}, .funcs = list(function(){})),
                "all elements in .funcs need to be named")
 
   # not a function
-  expect_error(package_(function(){}, .funcs = list(f = 1)),
+  expect_error(defer_(function(){}, .funcs = list(f = 1)),
                "only functions can be passed via .funcs")
 
   # name conflict
-  expect_error(package_(function(){}, f = function(){}, .funcs = list(f = function(){})),
+  expect_error(defer_(function(){}, f = function(){}, .funcs = list(f = function(){})),
                "names in ... and .funcs cannot overlap")
 })
 
@@ -93,7 +81,7 @@ test_that("unnamed symbols can be passed in ...", {
 
   # TODO to implement make a change in make_all_named()
 
-  pkg <- package_(function(x)summary(x), summary)
+  pkg <- defer_(function(x)summary(x), summary)
 
   expect_true(is_execution_package(pkg))
   expect_equal(list_functions(pkg), 'entry')
@@ -105,7 +93,7 @@ test_that("unnamed symbols can be passed in ...", {
 
 test_that("package can be executed", {
   f   <- mock(1, 2)
-  pkg <- package_(f)
+  pkg <- defer_(f)
 
   expect_equal(run_package(pkg, 1, 2), 1)
   expect_equal(run_package(pkg, 3, 4), 2)
@@ -118,7 +106,7 @@ test_that("package can be executed", {
 
 test_that("other function can be executed", {
   f   <- mock(1)
-  pkg <- package_(function(...){}, f = f)
+  pkg <- defer_(function(...){}, f = f)
 
   expect_equal(run_package(pkg, .fun = 'f', 1, 2), 1)
   expect_no_calls(f, 1)
@@ -128,7 +116,7 @@ test_that("other function can be executed", {
 
 test_that("named entry function can be executed", {
   f   <- mock(1)
-  pkg <- package_('f', f = f)
+  pkg <- defer_('f', f = f)
 
   expect_equal(run_package(pkg, 1, 2), 1)
   expect_no_calls(f, 1)
@@ -144,7 +132,7 @@ test_that("functions can execute each other", {
 
   # mock is passed under a different name to verify that f() doesn't reach
   # back to *this* environment
-  pkg <- package_(f, g = m)
+  pkg <- defer_(f, g = m)
 
   expect_equal(run_package(pkg, 1, 2), 1)
   expect_no_calls(m, 1)
