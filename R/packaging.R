@@ -46,14 +46,14 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
       stop("only function objects can be passed via `functions`", call. = FALSE)
     }
     if (!is_all_named(functions)) {
-      stop("all elements in `functions` must to be named", call. = FALSE)
+      stop("all elements in `functions` must be named", call. = FALSE)
     }
   }
 
   # no overlaps are allowed
   if (length(intersect(names(ellipsis), names(functions))))
   {
-    stop("no overlaps between names in ... and `functions` are allowed",
+    stop("names in ... and `functions` cannot overlap",
          call. = FALSE)
   }
 
@@ -63,7 +63,7 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
   # split functions and library dependencies
   i <- vapply(dependencies, is_library_dependency, logical(1))
   library_deps <- dependencies[i]
-  dependencies <- dependencies[!d]
+  dependencies <- dependencies[!i]
 
   # turn dependencies into names + pkg names
   if (length(dependencies)) {
@@ -142,7 +142,7 @@ is_library_dependency <- function (x)
 
 
 
-#' @description \code{is_execution_package} verifies if the given object
+#' @description \code{is_deferred} verifies if the given object
 #' is an execution package.
 #'
 #' @param x Object to be tested.
@@ -163,10 +163,11 @@ is_deferred <- function (x) inherits(x, 'deferred')
 #' @export
 #' @rdname package
 #'
-list_functions <- function (pkg)
+extract_functions <- function (df)
 {
-  stopifnot(is_execution_package(pkg))
-  return(names(pkg$functions))
+  stopifnot(is_deferred(df))
+  ee <- environment(df)
+  return(names(ee$function_deps))
 }
 
 
@@ -182,9 +183,10 @@ list_functions <- function (pkg)
 #' @export
 #' @rdname package
 #'
-list_dependencies <- function (pkg)
+extract_dependencies <- function (df)
 {
-  stopifnot(is_execution_package(pkg))
-  return(pkg$dependencies)
+  stopifnot(is_deferred(df))
+  ee <- environment(df)
+  return(ee$library_deps)
 }
 

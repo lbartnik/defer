@@ -2,8 +2,9 @@
 
 executor <- function (...)
 {
-  stopifnot(exists("function_deps", inherits = FALSE),
-            exists("library_deps", inherits = FALSE))
+  ee <- parent.env(environment())
+  stopifnot(exists("function_deps", envir = ee, inherits = FALSE),
+            exists("library_deps", envir = ee, inherits = FALSE))
   stopifnot('entry' %in% names(function_deps))
 
   # create the execution environment
@@ -29,5 +30,30 @@ executor <- function (...)
   #      are changes while creating the executor
   
   # make the call and pass arguments
-  do.call(.fun, list(...), envir = exec_env)
+  do.call('entry', list(...), envir = exec_env)
+}
+
+
+#' @export
+run_deferred <- function (df, ...)
+{
+  stopifnot(is_deferred(df))
+  df(...)
+}
+
+
+#' @export
+print.deferred <- function (x)
+{
+  stopifnot(is.function(x))
+  ee <- environment(x)
+
+  cat("Deferred-execution function\n")
+  
+  cat("Dependencies: ", setdiff(names(ee$function_deps), 'entry'))
+  cat("\n\n")
+  
+  cat("Entry function:\n")
+  
+  print(ee$function_deps$entry)
 }
