@@ -19,16 +19,27 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
   stopifnot(is.function(entry))
   stopifnot(is.list(functions), is.list(variables))
   
+  if (length(variables)) {
+    stop("`variables` are not supported yet", call. = FALSE)
+  }
+  
   # do not use list(...) because functions might be pointed by
   # names, e.g. defer(f, summary); in that case we first extract
   # the name (with make_all_named), and later the package name
   ellipsis <- eval(substitute(alist(...)))
   ellipsis <- make_all_named(ellipsis)
-
+  
   # now extract the actual object
   eval_env <- parent.frame()
   ellipsis <- lapply(ellipsis, function(x)eval(x, envir = eval_env))
 
+  if ('entry' %in% names(ellipsis)) {
+    stop('cannot declare the `entry` function among ...', call. = FALSE)
+  }
+  else {
+    ellipsis$entry <- entry
+  }
+    
   # prepare `functions`; only actual functions are allowed
   if (length(functions)) {
     if (!is_all_functions(functions)) {
@@ -39,57 +50,64 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
     }
   }
 
-  # prepare `variables`; all objects are allowed
-  if (length(variables)) {
-    if (!is_all_named(variables)) {
-      stop("all elements in `variables` must to be named", call. = FALSE)
-    }
-  }
-  
   # no overlaps are allowed
-  if (!is_empty(intersect(names(ellipsis), names(functions))) ||
-      !is_empty(intersect(names(ellipsis), names(variables))) ||
-      !is_empty(intersect(names(functions), names(variables))))
+  if (length(intersect(names(ellipsis), names(functions))))
   {
-    stop("no overlaps between names in ..., `functions` and `variables` are allowed",
+    stop("no overlaps between names in ... and `functions` are allowed",
          call. = FALSE)
   }
 
-  # put all dependencies together and then extract each category one by one
-  dependencies <- c(ellipsis, functions, variables)
+  # --- put all dependencies together and then extract each category one by one
+  dependencies <- c(ellipsis, functions)
 
   # split functions and library dependencies
-  id <- vapply(functions, is_library_dependency, logical(1))
-  dependencies <- functions[id]
-  functions <- functions[!id]
+  i <- vapply(dependencies, is_library_dependency, logical(1))
+  library_deps <- dependencies[i]
+  dependencies <- dependencies[!d]
 
   # turn dependencies into names + pkg names
-  if (length(dependencies) > 0) {
-    dep_pkgs <- vapply(dependencies, function(x) environmentName(environment(x)),
+  if (length(dependencies)) {
+    package_names <- vapply(library_deps, function(x) environmentName(environment(x)),
                        character(1))
-    dependencies <- names(dependencies)
-    names(dependencies) <- dep_pkgs
+    library_deps <- names(library_deps)
+    names(library_deps) <- package_names
   }
   else {
-    dependencies <- character()
+    library_deps <- character()
   }
 
+  # extract regular functions
+  i <- vapply(dependencies, is.function, logical(1))
+  function_deps <- dependencies[i]
+  dependencies <- dependencies[!i]
+  
   # remove environment from a function unless it's a closure
-  functions <- c(list(entry = entry), functions)
-  functions <- lapply(functions, function (f) {
-    if (identical(environment(f), globalenv()))
+  function_deps <- lapply(function_deps, function (f) {
+    if (identical(environment(f), eval_env)) {
       environment(f) <- emptyenv()
+    }
     f
   })
+  
+  # there should be nothing left
+  if (length(dependencies)) {
+    stop('unprocessed dependencies left', call. = FALSE)
+  }
 
   # TODO should return a self-contained function that can be run even
   #      without the `defer` package installed
   # TODO it can be called a class(f) == c("deferred", "function")
   # return the package object
-  structure(
-    list(functions = functions, dependencies = dependencies),
-    class = 'execution_package'
-  ) # structure
+  
+  executor <- defer::executor
+  exec_env <- environment(executor) <- new.env(parent = eval_env)
+  
+  exec_env$function_deps <- function_deps
+  exec_env$library_deps  <- library_deps
+  
+  class(executor) <- c("deferred", "function")
+  
+  executor
 }
 
 
@@ -133,7 +151,7 @@ is_library_dependency <- function (x)
 #'
 #' @rdname package
 #'
-is_execution_package <- function (x) inherits(x, 'execution_package')
+is_deferred <- function (x) inherits(x, 'deferred')
 
 
 #' @description \code{list_functions} returns a \code{character} vector
@@ -170,40 +188,3 @@ list_dependencies <- function (pkg)
   return(pkg$dependencies)
 }
 
-
-
-#' Run a function from the execution package.
-#'
-#' @param pkg Execution package object.
-#' @param ... Parameters to the function being called.
-#' @param .fun Name of the function being called.
-#' @return The value returned in the call.
-#'
-#' @export
-#' @seealso \code{\link{package_}}
-#'
-run_package <- function (pkg, ..., .fun = 'entry')
-{
-  stopifnot(is_execution_package(pkg))
-  stopifnot(.fun %in% names(pkg$functions))
-
-  # create the execution environment
-  exec_env <- new.env(parent = parent.frame(2))
-
-  # make sure each function will search in exec_env by setting either
-  # it parent (regular functions) or grandparent (closures) to exec_env
-  mapply(function(f, n) {
-    # do not remove environment from a closure; package_ sets env
-    # to emptyenv() unless it's a closure
-    if (identical(environment(f), emptyenv()))
-      environment(f) <- exec_env
-    else
-      parent.env(environment(f)) <- exec_env
-
-    assign(n, f, envir = exec_env)
-    T
-  }, f = pkg$functions, n = names(pkg$functions))
-
-  # make the call and pass arguments
-  do.call(.fun, list(...), envir = exec_env)
-}

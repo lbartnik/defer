@@ -1,0 +1,33 @@
+
+
+executor <- function (...)
+{
+  stopifnot(exists("function_deps", inherits = FALSE),
+            exists("library_deps", inherits = FALSE))
+  stopifnot('entry' %in% names(function_deps))
+
+  # create the execution environment
+  exec_env <- new.env(parent = parent.frame(2))
+  
+  # make sure each function will search in exec_env by setting either
+  # it parent (regular functions) or grandparent (closures) to exec_env
+  mapply(function(f, n) {
+    # do not remove environment from a closure; package_ sets env
+    # to emptyenv() unless it's a closure
+    if (identical(environment(f), emptyenv()))
+      environment(f) <- exec_env
+    else
+      parent.env(environment(f)) <- exec_env
+    
+    assign(n, f, envir = exec_env)
+    T
+  }, f = function_deps, n = names(function_deps))
+  
+  # TODO add library deps
+  
+  # TODO use match.call or something similar to pass arguments if they
+  #      are changes while creating the executor
+  
+  # make the call and pass arguments
+  do.call(.fun, list(...), envir = exec_env)
+}

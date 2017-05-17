@@ -6,7 +6,7 @@ context("packaging")
 test_that("execution package is returned and function can be listed", {
   f   <- function(){}
   pkg <- defer_(f)
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), 'entry')
 })
 
@@ -16,7 +16,7 @@ test_that("multiple functions can be packaged", {
   g <- function(a)sqrt(a)
   pkg <- defer_(f, g = g)
 
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), c('entry', 'g'))
 })
 
@@ -33,7 +33,7 @@ test_that("only named functions are allowed", {
 test_that("library functions are not packaged but recorded", {
   pkg <- defer_(function(){}, summary = summary)
 
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), 'entry')
   expect_equal(list_dependencies(pkg), c(base = 'summary'))
 })
@@ -44,7 +44,7 @@ test_that("%>% is recognized as regular dependency", {
 
   pkg <- defer_(function(){}, f = . %>% summary(.))
 
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), c('entry', 'f'))
 })
 
@@ -53,7 +53,7 @@ test_that("%>% is recognized as regular dependency", {
 test_that("functions can be passed by .funcs", {
   pkg <- defer_(function(x)f(x), .funcs = list(f = function(y)summary(y)))
 
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), c('entry', 'f'))
   expect_equal(run_package(pkg, iris), summary(iris))
 })
@@ -83,7 +83,7 @@ test_that("unnamed symbols can be passed in ...", {
 
   pkg <- defer_(function(x)summary(x), summary)
 
-  expect_true(is_execution_package(pkg))
+  expect_true(is_deferred(pkg))
   expect_equal(list_functions(pkg), 'entry')
   expect_equal(list_dependencies(pkg, c(base = 'summary')))
 })
