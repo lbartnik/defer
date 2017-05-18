@@ -11,6 +11,8 @@
 #' @rdname package
 #' @seealso \code{\link[defer]{execute}}
 #'
+#' @importFrom rlang quos eval_tidy caller_env
+#'
 defer_ <- function (entry, ..., functions = list(), variables = list())
 {
   # TODO should library-function names be extracted even in the programmer's API?
@@ -23,23 +25,10 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
     stop("`variables` are not supported yet", call. = FALSE)
   }
   
-  # do not use list(...) because functions might be pointed by
-  # names, e.g. defer(f, summary); in that case we first extract
-  # the name (with make_all_named), and later the package name
-  ellipsis <- eval(substitute(alist(...)))
-  ellipsis <- make_all_named(ellipsis)
-  
-  # now extract the actual object
-  eval_env <- parent.frame()
-  ellipsis <- lapply(ellipsis, function(x)eval(x, envir = eval_env))
+  # capture expressions with quos() and make sure all element are named
+  dots <- quos(...)
+  dots <- eval_tidy(make_all_named(dots))
 
-  if ('entry' %in% names(ellipsis)) {
-    stop('cannot declare the `entry` function among ...', call. = FALSE)
-  }
-  else {
-    ellipsis$entry <- entry
-  }
-    
   # prepare `functions`; only actual functions are allowed
   if (length(functions)) {
     if (!is_all_functions(functions)) {
@@ -51,15 +40,21 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
   }
 
   # no overlaps are allowed
-  if (length(intersect(names(ellipsis), names(functions))))
+  if (length(intersect(names(dots), names(functions))))
   {
     stop("names in ... and `functions` cannot overlap",
          call. = FALSE)
   }
 
   # --- put all dependencies together and then extract each category one by one
-  dependencies <- c(ellipsis, functions)
+  dependencies <- c(dots, functions)
 
+  if ('entry' %in% names(dependencies)) {
+    stop('cannot use the name `entry` among ... nor `functions`', call. = FALSE)
+  }
+  
+  dependencies$entry <- entry
+  
   # split functions and library dependencies
   i <- vapply(dependencies, is_library_dependency, logical(1))
   library_deps <- dependencies[i]
@@ -82,6 +77,7 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
   dependencies <- dependencies[!i]
   
   # remove environment from a function unless it's a closure
+  eval_env <- caller_env()
   function_deps <- lapply(function_deps, function (f) {
     if (identical(environment(f), eval_env)) {
       environment(f) <- emptyenv()

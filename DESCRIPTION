@@ -10,6 +10,7 @@ Description: Serialize a function/code together with its
     on a remote host.
 License: GPL3
 Imports:
+    rlang
 Collate:
     'execution.R'
     'packaging.R'

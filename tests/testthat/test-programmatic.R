@@ -54,7 +54,7 @@ test_that("functions can be passed by functions", {
   df <- defer_(function(x)f(x), functions = list(f = function(y)summary(y)))
 
   expect_true(is_deferred(df))
-  expect_equal(extract_functions(df), c('entry', 'f'))
+  expect_true(setequal(extract_functions(df), c('entry', 'f')))
   expect_equal(run_deferred(df, iris), summary(iris))
 })
 
