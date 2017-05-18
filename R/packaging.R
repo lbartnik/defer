@@ -99,7 +99,7 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
   # TODO it can be called a class(f) == c("deferred", "function")
   # return the package object
   
-  executor <- defer::executor
+  executor <- defer:::executor
   exec_env <- environment(executor) <- new.env(parent = eval_env)
   
   exec_env$function_deps <- function_deps
