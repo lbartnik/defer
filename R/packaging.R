@@ -5,6 +5,9 @@
 #' @param ... List of dependencies, functions and variables.
 #' @param functions A list of functions.
 #' @param variables A list of variables.
+#' @param .extract Whether to analyze functions and extract dependencies
+#'        from their bodies.
+#' 
 #' @return A deferred function object.
 #'
 #' @export
@@ -13,7 +16,7 @@
 #'
 #' @importFrom rlang quos eval_tidy caller_env
 #'
-defer_ <- function (entry, ..., functions = list(), variables = list())
+defer_ <- function (entry, ..., functions = list(), variables = list(), .extract = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
@@ -90,10 +93,7 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
     stop('unprocessed dependencies left', call. = FALSE)
   }
 
-  # TODO should return a self-contained function that can be run even
-  #      without the `defer` package installed
-  # TODO it can be called a class(f) == c("deferred", "function")
-  # return the package object
+  # --- prepare and return the deferred execution function object
   
   executor <- defer:::executor
   exec_env <- environment(executor) <- new.env(parent = eval_env)
@@ -107,13 +107,33 @@ defer_ <- function (entry, ..., functions = list(), variables = list())
 }
 
 
+#' @importFrom rlang UQE
 make_all_named <- function (args)
 {
-  if (!is_all_named(args)) {
-    stop("all objects passed via ... need to be named", call. = FALSE)
+  empty <- !nchar(names(args))
+  if (!any(empty)) return(args)
+
+  into_name <- function (x) {
+    e <- UQE(x)
+    if (is.name(e)) return(as.character(e))
+    if (is_double_colon(e)) return(deparse(e))
+    ""
   }
 
+  new_names <- vapply(args[empty], into_name, character(1))
+
+  if (any(!nchar(new_names))) {
+    stop("some objects are not named and names cannot be auto-generated",
+         call. = FALSE)
+  }
+
+  names(args)[empty] <- new_names
   args
+}
+
+is_double_colon <- function (x)
+{
+  is.call(x) && identical(x[[1]], bquote(`::`))
 }
 
 
@@ -135,6 +155,14 @@ is_library_dependency <- function (x)
   isNamespace(environment(x))
 }
 
+
+
+library(R6)
+Extractor <- R6::R6Class("Extractor",
+  public = list(
+    
+  )
+)
 
 
 

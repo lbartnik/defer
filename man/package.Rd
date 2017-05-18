@@ -7,7 +7,8 @@
 \alias{extract_dependencies}
 \title{Defer function execution - create an execution package.}
 \usage{
-defer_(entry, ..., functions = list(), variables = list())
+defer_(entry, ..., functions = list(), variables = list(),
+  .extract = FALSE)
 
 is_deferred(x)
 
@@ -23,6 +24,9 @@ extract_dependencies(df)
 \item{functions}{A list of functions.}
 
 \item{variables}{A list of variables.}
+
+\item{.extract}{Whether to analyze functions and extract dependencies
+from their bodies.}
 
 \item{x}{Object to be tested.}
 

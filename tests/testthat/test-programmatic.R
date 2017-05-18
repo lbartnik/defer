@@ -6,7 +6,7 @@ context("packaging")
 test_that("execution package is returned and function can be listed", {
   f   <- function(){}
   df <- defer_(f)
-  expect_true(is_deferred(df))
+  expect_is(df, 'deferred')
   expect_equal(extract_functions(df), 'entry')
 })
 
@@ -16,24 +16,25 @@ test_that("multiple functions can be packaged", {
   g <- function(a)sqrt(a)
   df <- defer_(f, g = g)
 
-  expect_true(is_deferred(df))
-  expect_true(setequal(extract_functions(df), c('entry', 'g')))
+  expect_is(df, 'deferred')
+  expect_setequal(extract_functions(df), c('entry', 'g'))
 })
 
 
-test_that("only named functions are allowed", {
+test_that("functions can be referred to by name", {
   f <- function(x)x*x
   g <- function(a)sqrt(a)
 
-  expect_error(defer_(f, g))
-  expect_error(defer_(f, 1))
+  df <- defer_(f, g)
+  expect_is(df, 'deferred')
+  expect_setequal(extract_functions(df), c('entry', 'g'))
 })
 
 
 test_that("library functions are not packaged but recorded", {
   df <- defer_(function(){}, summary = summary)
 
-  expect_true(is_deferred(df))
+  expect_is(df, 'deferred')
   expect_equal(extract_functions(df), 'entry')
   expect_equal(extract_dependencies(df), c(base = 'summary'))
 })
@@ -44,8 +45,8 @@ test_that("%>% is recognized as regular dependency", {
 
   df <- defer_(function(){}, f = . %>% summary(.))
 
-  expect_true(is_deferred(df))
-  expect_true(setequal(extract_functions(df), c('entry', 'f')))
+  expect_is(df, 'deferred')
+  expect_setequal(extract_functions(df), c('entry', 'f'))
 })
 
 # --- passing functions through functions ---------------------------------
@@ -53,8 +54,8 @@ test_that("%>% is recognized as regular dependency", {
 test_that("functions can be passed by functions", {
   df <- defer_(function(x)f(x), functions = list(f = function(y)summary(y)))
 
-  expect_true(is_deferred(df))
-  expect_true(setequal(extract_functions(df), c('entry', 'f')))
+  expect_is(df, 'deferred')
+  expect_setequal(extract_functions(df), c('entry', 'f'))
   expect_equal(run_deferred(df, iris), summary(iris))
 })
 
@@ -83,7 +84,7 @@ test_that("unnamed symbols can be passed in ...", {
 
   df <- defer_(function(x)summary(x), summary)
 
-  expect_true(is_deferred(df))
+  expect_is(df, 'deferred')
   expect_equal(extract_functions(df), 'entry')
   expect_equal(extract_dependencies(df, c(base = 'summary')))
 })
