@@ -153,9 +153,37 @@ is_library_dependency <- function (x)
 
 
 library(R6)
-Extractor <- R6::R6Class("Extractor",
+DependencyProcessor<- R6::R6Class("DependencyProcessor",
   public = list(
-    
+    dots = NA,
+    initialize = function (dots) {
+      self$dots <- dots
+    },
+    process = function (extract = FALSE) {
+      # 1. extract regular functions
+      # 2. extract variables
+      # 3. extract library functions
+      # 4. nothing else should be left
+      
+      private$extract_library_deps()
+    }
+  ),
+  private = list(
+    library_deps = NA,
+    extract_library_deps <- function () {
+      i <- vapply(self$dots, is_library_dependency, logical(1))
+      library_deps <- self$dots[i]
+      self$dots <- self$dots[!i]
+      
+      # turn dots into names + pkg names
+      if (!length(library_deps)) return()
+  
+      pkg_names <- vapply(library_deps, function(x) environmentName(environment(x)), character(1))
+      fun_names <- names(library_deps)
+      versions  <- seq_along(fun_names) # TODO extrat package version
+      
+      self$library_deps <- data_frame(fun = fun_names, pkg = pkg_names, ver = verions)
+    }
   )
 )
 
