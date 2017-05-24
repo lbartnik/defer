@@ -1,3 +1,15 @@
+#' @export
+defer <- function (entry, ..., .dots, .extract = TRUE)
+{
+  dots <- quos(...)
+  if (!missing(.dots)) {
+    stopifnot(is.list(.dots))
+    dots <- c(dots, .dots)
+  }
+
+  defer_(entry, .dots = dots, .extract = .extract)
+}
+
 
 #' Defer function execution - create an execution package.
 #'
@@ -16,55 +28,38 @@
 #'
 #' @importFrom rlang quos eval_tidy caller_env
 #'
-defer_ <- function (entry, ..., functions = list(), variables = list(), .extract = FALSE)
+defer_ <- function (entry, ..., .dots, .extract = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
   # entry must be a regular function
   stopifnot(is.function(entry))
-  stopifnot(is.list(functions), is.list(variables))
-  
-  if (length(variables)) {
-    stop("`variables` are not supported yet", call. = FALSE)
-  }
+  if (!missing(.dots)) stopifnot(is.list(.dots))
   
   # capture expressions with quos() and make sure all element are named
   dots <- quos(...)
   dots <- eval_tidy(make_all_named(dots))
-
-  # prepare `functions`; only actual functions are allowed
-  if (length(functions)) {
-    if (!is_all_functions(functions)) {
-      stop("only function objects can be passed via `functions`", call. = FALSE)
-    }
-    if (!is_all_named(functions)) {
-      stop("all elements in `functions` must be named", call. = FALSE)
-    }
-  }
+  .dots <- eval_tidy(make_all_named(.dots))
 
   # no overlaps are allowed
-  if (length(intersect(names(dots), names(functions))))
-  {
-    stop("names in ... and `functions` cannot overlap",
-         call. = FALSE)
+  if (length(intersect(names(dots), names(.dots)))) {
+    stop("names in ... and `.dots` cannot overlap", call. = FALSE)
+  }
+  if ('entry' %in% names(.dots)) {
+    stop('cannot use the name `entry` among `.dots`', call. = FALSE)
   }
 
   # --- put all dependencies together and then extract each category one by one
-  dependencies <- c(dots, functions)
+  dots <- c(dots, .dots)
+  dots$entry <- entry
 
-  if ('entry' %in% names(dependencies)) {
-    stop('cannot use the name `entry` among ... nor `functions`', call. = FALSE)
-  }
-  
-  dependencies$entry <- entry
-  
   # split functions and library dependencies
-  i <- vapply(dependencies, is_library_dependency, logical(1))
-  library_deps <- dependencies[i]
-  dependencies <- dependencies[!i]
+  i <- vapply(dots, is_library_dependency, logical(1))
+  library_deps <- dots[i]
+  dots <- dots[!i]
 
-  # turn dependencies into names + pkg names
-  if (length(dependencies)) {
+  # turn dots into names + pkg names
+  if (length(dots)) {
     package_names <- vapply(library_deps, function(x) environmentName(environment(x)),
                        character(1))
     library_deps <- names(library_deps)
@@ -75,9 +70,9 @@ defer_ <- function (entry, ..., functions = list(), variables = list(), .extract
   }
 
   # extract regular functions
-  i <- vapply(dependencies, is.function, logical(1))
-  function_deps <- dependencies[i]
-  dependencies <- dependencies[!i]
+  i <- vapply(dots, is.function, logical(1))
+  function_deps <- dots[i]
+  dots <- dots[!i]
   
   # remove environment from a function unless it's a closure
   eval_env <- caller_env()
@@ -89,7 +84,7 @@ defer_ <- function (entry, ..., functions = list(), variables = list(), .extract
   })
   
   # there should be nothing left
-  if (length(dependencies)) {
+  if (length(dots)) {
     stop('unprocessed dependencies left', call. = FALSE)
   }
 
