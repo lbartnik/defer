@@ -1,4 +1,4 @@
-context("packaging")
+context("programmatic")
 
 
 # --- packaging --------------------------------------------------------
@@ -36,7 +36,12 @@ test_that("library functions are not packaged but recorded", {
 
   expect_is(df, 'deferred')
   expect_equal(extract_functions(df), 'entry')
-  expect_equal(extract_dependencies(df), c(base = 'summary'))
+
+  libs <- extract_dependencies(df)
+  expect_named(libs, c('fun', 'pkg', 'ver'))
+  expect_equal(libs$fun, 'summary')
+  expect_equal(libs$pkg, 'base')
+  expect_equal(libs$ver, 1)
 })
 
 
@@ -52,7 +57,7 @@ test_that("%>% is recognized as regular dependency", {
 # --- passing functions through functions ---------------------------------
 
 test_that("functions can be passed by functions", {
-  df <- defer_(function(x)f(x), functions = list(f = function(y)summary(y)))
+  df <- defer_(function(x)f(x), .dots = list(f = function(y)summary(y)))
 
   expect_is(df, 'deferred')
   expect_setequal(extract_functions(df), c('entry', 'f'))
@@ -60,18 +65,18 @@ test_that("functions can be passed by functions", {
 })
 
 
-test_that("handling errors in functions", {
+test_that("handling errors in .dots", {
   # unnamed
-  expect_error(defer_(function(){}, functions = list(function(){})),
-               "all elements in `functions` must be named")
+  expect_error(defer_(function(){}, .dots = list(function(){})),
+               "some elements in `.dots` are not named and names cannot be auto-generated")
 
   # not a function
-  expect_error(defer_(function(){}, functions = list(f = 1)),
-               "only function objects can be passed via `functions`")
+  expect_error(defer_(function(){}, 1),
+               "some arguments passed in ... are not named and names cannot be auto-generated")
 
   # name conflict
-  expect_error(defer_(function(){}, f = function(){}, functions = list(f = function(){})),
-               "names in ... and `functions` cannot overlap")
+  expect_error(defer_(function(){}, f = function(){}, .dots = list(f = function(){})),
+               "names in ... and `.dots` cannot overlap")
 })
 
 

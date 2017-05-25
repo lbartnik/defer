@@ -7,7 +7,7 @@
 \alias{extract_dependencies}
 \title{Defer function execution - create an execution package.}
 \usage{
-defer_(entry, ..., .dots, .extract = FALSE)
+defer_(entry, ..., .dots = list(), .extract = FALSE)
 
 is_deferred(x)
 

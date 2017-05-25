@@ -4,7 +4,8 @@ executor <- function (...)
 {
   ee <- parent.env(environment())
   stopifnot(exists("function_deps", envir = ee, inherits = FALSE),
-            exists("library_deps", envir = ee, inherits = FALSE))
+            exists("library_deps", envir = ee, inherits = FALSE),
+            exists("variables", envir = ee, inherits = FALSE))
   stopifnot('entry' %in% names(function_deps))
 
   # create the execution environment
@@ -21,9 +22,14 @@ executor <- function (...)
       parent.env(environment(f)) <- exec_env
     
     assign(n, f, envir = exec_env)
-    T
   }, f = function_deps, n = names(function_deps))
+
+  # set variables
+  mapply(function(v, n) {
+    assign(n, v, envir = exec_env)
+  }, v = variables, n = names(variables))
   
+    
   # TODO add library deps
   
   # TODO use match.call or something similar to pass arguments if they
