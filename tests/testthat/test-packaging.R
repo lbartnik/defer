@@ -1,29 +1,29 @@
-context("packaging")
+context("non-interactive")
 
 
 test_that("single function", {
-  d <- defer(function()1)
+  d <- defer_(function()1)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
 
 
 test_that("single function dependency", {
-  d <- defer(function()f(), f = function()1)
+  d <- defer_(function()f(), f = function()1)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
 
 
 test_that("single variable dependency", {
-  d <- defer(function()x, x = 1)
+  d <- defer_(function()x, x = 1)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
 
 
 test_that("variable and function", {
-  d <- defer(function()f(), f = function()x, x = 1)
+  d <- defer_(function()f(), f = function()x, x = 1)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
@@ -32,7 +32,7 @@ test_that("variable and function", {
 test_that("by name", {
   f <- function()x
   x <- 1
-  d <- defer(function()f(), f = f, x = x)
+  d <- defer_(function()f(), f = f, x = x)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
@@ -41,14 +41,14 @@ test_that("by name", {
 test_that("just name", {
   f <- function()x
   x <- 1
-  d <- defer(function()f(), f, x)
+  d <- defer_(function()f(), f, x)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
 
 
 test_that("dots", {
-  d <- defer(function()f(), .dots = list(f = function()x, x = 1))
+  d <- defer_(function()f(), .dots = list(f = function()x, x = 1))
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
@@ -59,7 +59,7 @@ test_that("dots by name", {
   x <- 1
   q <- quos(x = x, f = f)
 
-  d <- defer(function()f(), .dots = q)
+  d <- defer_(function()f(), .dots = q)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
@@ -70,8 +70,18 @@ test_that("unnamed dots", {
   x <- 1
   q <- quos(x, f)
   
-  d <- defer(function()f(), .dots = q)
+  d <- defer_(function()f(), .dots = q)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
+
+
+test_that("extract", {
+  f <- function()1
+  d <- defer_(function()f(), .extract = TRUE)
+
+  expect_is(d, "deferred")
+  expect_equal(d(), 1)
+})
+
 

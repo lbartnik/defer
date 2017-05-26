@@ -229,14 +229,38 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         environment(fun) <- emptyenv()
       }
       self$function_deps[[name]] <- fun
+      if (isTRUE(private$extract)) private$process_body(body(fun))
     },
     
     process_variable = function (name, value) {
       self$variables[[name]] <- value
     },
     
-    extract_deps = function (fun) {
+    # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
+    process_body = function (x) {
+      if (!is.recursive(x)) return()
       
+      recurse <- function(x) {
+        sort(unique(as.character(unlist(lapply(x, private$process_body)))))
+      }
+      
+      if (is.call(x)) {
+        f_name <- as.character(x[[1]])
+        if (f_name %in% names(self$function_deps) || f_name %in% self$library_deps$fun ||
+            f_name %in% names(self$deps))
+        {
+          return(recurse(x[-1]))
+        }
+        
+        if (exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
+          f_obj <- get(f_name, envir = private$caller_env)
+          private$deps[[f_name]] <- f_obj
+        }
+        
+        recurse(x[-1])
+      } else {
+        recurse(x)
+      }
     }
   )
 )
