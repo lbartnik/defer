@@ -233,6 +233,16 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     
     process_variable = function (name, value) {
       self$variables[[name]] <- value
+    },
+    
+    extract_deps = function (fun) {
+      
     }
   )
 )
+
+
+
+
+
+
