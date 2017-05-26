@@ -83,15 +83,16 @@ test_that("handling errors in .dots", {
 # --- unnamed library hints --------------------------------------------
 
 test_that("unnamed symbols can be passed in ...", {
-  skip("this functionality is not yet implemented")
-
-  # TODO to implement make a change in make_all_named()
 
   df <- defer_(function(x)summary(x), summary)
 
   expect_is(df, 'deferred')
   expect_equal(extract_functions(df), 'entry')
-  expect_equal(extract_dependencies(df, c(base = 'summary')))
+  
+  deps <- extract_dependencies(df)
+  expect_equal(deps$fun, "summary")
+  expect_equal(deps$pkg, "base")
+  expect_equal(deps$ver, 1)
 })
 
 

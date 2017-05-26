@@ -52,11 +52,10 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
   }
 
   # --- put all dependencies together and then extract each category one by one
-  dots <- c(dots, .dots)
-  dots$entry <- entry
+  deps <- c(dots, .dots, list(entry = entry))
   eval_env <- caller_env()
   
-  processor <- DependencyProcessor$new(dots, eval_env)
+  processor <- DependencyProcessor$new(deps, eval_env)
   processor$run(.extract)
 
   # --- prepare and return the deferred execution function object
@@ -72,119 +71,6 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
   
   executor
 }
-
-
-#' @importFrom rlang UQE
-make_all_named <- function (args)
-{
-  is_double_colon <- function (x) is.call(x) && identical(x[[1]], bquote(`::`))
-  into_name       <- function (x) {
-    e <- UQE(x)
-    if (is.name(e)) return(as.character(e))
-    if (is_double_colon(e)) return(deparse(e))
-    ""
-  }
-
-  if (is.null(names(args)) || !length(names(args))) {
-    names(args) <- rep("", length(args))
-  }
-  
-  empty <- !nchar(names(args))
-  if (!any(empty)) return(args)
-  
-  new_names <- vapply(args[empty], into_name, character(1))
-
-  if (any(!nchar(new_names))) {
-    stop("some objects are not named and names cannot be auto-generated",
-         call. = FALSE)
-  }
-
-  names(args)[empty] <- new_names
-  args
-}
-
-
-is_library_dependency <- function (x)
-{
-  isNamespace(environment(x))
-}
-
-
-
-library(R6)
-
-#' @importFrom dplyr data_frame
-#' @importFrom rlang caller_env
-DependencyProcessor<- R6::R6Class("DependencyProcessor",
-  public = list(
-    library_deps = NA,
-    function_deps = NA,
-    variables = NA,
-    
-    initialize = function (deps, caller_env) {
-      private$deps <- deps
-      private$caller_env <- caller_env
-    },
-    
-    # 1. extract regular functions
-    # 2. extract variables
-    # 3. extract library functions
-    # 4. nothing else should be left
-    #
-    run = function (extract = FALSE)
-    {
-      private$extract_library_deps()
-      private$extract_regular_functions()
-      private$extract_variables()
-
-      if (length(private$deps)) {
-        stop('unprocessed dependencies left', call. = FALSE)
-      }
-    }
-  ),
-  private = list(
-    deps = NA,
-    caller_env = NA,
-    
-    extract_library_deps = function () {
-      i <- vapply(private$deps, is_library_dependency, logical(1))
-      deps <- private$deps[i]
-      private$deps <- private$deps[!i]
-      
-      # turn dots into names + pkg names
-      if (!length(deps)) return()
-  
-      pkg_names <- vapply(deps, function(x) environmentName(environment(x)), character(1))
-      fun_names <- names(deps)
-      versions  <- seq_along(fun_names) # TODO extrat package version
-      
-      self$library_deps <- data_frame(fun = fun_names, pkg = pkg_names, ver = versions)
-    },
-    
-    # Extracts regular functions.
-    #
-    extract_regular_functions = function () {
-      i <- vapply(private$deps, is.function, logical(1))
-      deps <- private$deps[i]
-      private$deps <- private$deps[!i]
-      
-      # remove environment from a function unless it's a closure
-      self$function_deps <- lapply(deps, function (f) {
-        if (identical(environment(f), private$caller_env)) {
-          environment(f) <- emptyenv()
-        }
-        f
-      })
-    },
-    
-    extract_variables = function () {
-      i <- vapply(private$deps, function(x) is.vector(x) || is.list(x), logical(1))
-      self$variables <- private$deps[i]
-      private$deps <- private$deps[!i]
-    }
-  )
-)
-
 
 
 #' @description \code{is_deferred} verifies if the given object
@@ -235,3 +121,118 @@ extract_dependencies <- function (df)
   return(ee$library_deps)
 }
 
+
+# ---------------------------------------------------------------------
+
+#' @importFrom rlang UQE
+make_all_named <- function (args)
+{
+  is_double_colon <- function (x) is.call(x) && identical(x[[1]], bquote(`::`))
+  into_name       <- function (x) {
+    e <- UQE(x)
+    if (is.name(e)) return(as.character(e))
+    if (is_double_colon(e)) return(deparse(e))
+    ""
+  }
+
+  if (is.null(names(args)) || !length(names(args))) {
+    names(args) <- rep("", length(args))
+  }
+  
+  empty <- !nchar(names(args))
+  if (!any(empty)) return(args)
+  
+  new_names <- vapply(args[empty], into_name, character(1))
+
+  if (any(!nchar(new_names))) {
+    stop("some objects are not named and names cannot be auto-generated",
+         call. = FALSE)
+  }
+
+  names(args)[empty] <- new_names
+  args
+}
+
+
+is_library_dependency <- function (x)
+{
+  isNamespace(environment(x))
+}
+
+
+
+library(R6)
+
+#' @importFrom dplyr data_frame
+#' @importFrom rlang caller_env
+DependencyProcessor<- R6::R6Class("DependencyProcessor",
+  public = list(
+    library_deps  = data_frame(pkg = character(), fun = character(), ver = character()),
+    function_deps = list(),
+    variables     = list(),
+    
+    initialize = function (deps, caller_env) {
+      private$deps <- deps
+      private$caller_env <- caller_env
+    },
+    
+    # 1. extract regular functions
+    # 2. extract variables
+    # 3. extract library functions
+    # 4. nothing else should be left
+    #
+    run = function (extract = FALSE)
+    {
+      private$extract <- extract
+      private$process()
+    }
+  ),
+  private = list(
+    deps       = list(),
+    processed  = list(),
+    caller_env = NA,
+    extract    = FALSE,
+
+    process = function () {
+      while (length(private$deps)) {
+        name    <- names(private$deps)[1]
+        current <- private$deps[[1]]
+        private$deps <- private$deps[-1]
+        
+        if (is_library_dependency(current)) {
+          private$process_library(name, current)
+        }
+        else if (is.function(current)) {
+          private$process_function(name, current)
+        }
+        else if (is.vector(current) || is.list(current)) {
+          private$process_variable(name, current)
+        }
+        else {
+          stop("cannot process")
+        }
+      }
+    },
+    
+    process_library = function (name, fun) {
+      pkg_name <- environmentName(environment(fun))
+      new_dep  <- data_frame(fun = name, pkg = pkg_name, ver = 1)
+      
+      self$library_deps <- rbind(self$library_deps, new_dep)
+    },
+    
+    # Extracts regular functions.
+    # remove environment from a function unless it's a closure
+    #
+    process_function = function (name, fun) {
+      if (identical(environment(fun), private$caller_env)) {
+        environment(fun) <- emptyenv()
+      }
+      self$function_deps[[name]] <- fun
+    },
+    
+    process_variable = function (name, value) {
+      self$variables[[name]] <- value
+    }
+  )
+)
