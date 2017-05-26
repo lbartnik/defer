@@ -10,11 +10,13 @@ Description: Serialize a function/code together with its
     on a remote host.
 License: GPL3
 Imports:
+    rlang
 Collate:
-    'package.R'
+    'execution.R'
+    'packaging.R'
 Suggests:
     knitr,
     mockery,
     testthat
 VignetteBuilder: knitr
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
