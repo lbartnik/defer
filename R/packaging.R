@@ -65,7 +65,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
   
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps
-  exec_env$variables     <- processor$variables
+  exec_env$variables     <- processor$variable_deps
   
   class(executor) <- c("deferred", "function")
   
@@ -169,7 +169,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
   public = list(
     library_deps  = data_frame(pkg = character(), fun = character(), ver = character()),
     function_deps = list(),
-    variables     = list(),
+    variable_deps = list(),
     
     initialize = function (deps, caller_env) {
       private$deps <- deps
@@ -233,22 +233,25 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
     
     process_variable = function (name, value) {
-      self$variables[[name]] <- value
+      self$variable_deps[[name]] <- value
     },
     
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
     process_body = function (x) {
-      if (!is.recursive(x)) return()
       
-      recurse <- function(x) {
-        sort(unique(as.character(unlist(lapply(x, private$process_body)))))
+      recurse <- function(x) sort(unique(as.character(unlist(lapply(x, private$process_body)))))
+      
+      already_found <- function (x) (f_name %in% c(names(self$function_deps), self$library_deps$fun, names(self$deps)))
+      
+      if (is.name(x)) {
+        v_name <- as.character(x)
+        if (exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
+          self$variable_deps[[v_name]] <- get(v_name, envir = private$caller_env)
+        }
       }
-      
-      if (is.call(x)) {
+      else if (is.call(x)) {
         f_name <- as.character(x[[1]])
-        if (f_name %in% names(self$function_deps) || f_name %in% self$library_deps$fun ||
-            f_name %in% names(self$deps))
-        {
+        if (already_found(f_name)) {
           return(recurse(x[-1]))
         }
         
@@ -257,10 +260,10 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
           private$deps[[f_name]] <- f_obj
         }
         
-        recurse(x[-1])
-      } else {
-        recurse(x)
+        return(recurse(x[-1]))
       }
+      
+      if (is.recursive(x)) recurse(x)
     }
   )
 )

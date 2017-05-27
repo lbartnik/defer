@@ -76,7 +76,7 @@ test_that("unnamed dots", {
 })
 
 
-test_that("extract", {
+test_that("extract function", {
   f <- function()1
   d <- defer_(function()f(), .extract = TRUE)
 
@@ -84,4 +84,12 @@ test_that("extract", {
   expect_equal(d(), 1)
 })
 
+
+test_that("extract variable", {
+  x <- 1
+  d <- defer_(function()x, .extract = TRUE)
+  
+  expect_is(d, "deferred")
+  expect_equal(d(), 1)
+})
 
