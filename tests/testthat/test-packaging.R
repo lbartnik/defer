@@ -47,6 +47,13 @@ test_that("just name", {
 })
 
 
+test_that("double colon", {
+  d <- defer_(function()summary(1), base::summary)
+  expect_is(d, "deferred")
+  expect_equal(d(), summary(1))
+})
+
+
 test_that("dots", {
   d <- defer_(function()f(), .dots = list(f = function()x, x = 1))
   expect_is(d, "deferred")

@@ -1,3 +1,5 @@
 * copy the main function's signature
+* load library dependencies
+* store & check package versions
 * refresh docs
 * create an introductory vignette

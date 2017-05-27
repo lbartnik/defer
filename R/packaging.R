@@ -131,7 +131,7 @@ make_all_named <- function (args)
   into_name       <- function (x) {
     e <- UQE(x)
     if (is.name(e)) return(as.character(e))
-    if (is_double_colon(e)) return(deparse(e))
+    if (is_double_colon(e)) return(deparse(e[[3]]))
     ""
   }
 
