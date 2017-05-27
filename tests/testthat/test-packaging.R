@@ -93,3 +93,12 @@ test_that("extract variable", {
   expect_equal(d(), 1)
 })
 
+
+test_that("extract function and variable", {
+  x <- 1
+  f <- function()x
+  d <- defer_(function()f(), .extract = TRUE)
+  
+  expect_is(d, "deferred")
+  expect_equal(d(), 1)
+})
