@@ -1,7 +1,10 @@
 
 
-executor <- function (...)
+executor <- function ()
 {
+  # fist save the arguments
+  args <- as.list(environment())
+
   ee <- parent.env(environment())
   stopifnot(exists("function_deps", envir = ee, inherits = FALSE),
             exists("library_deps", envir = ee, inherits = FALSE),
@@ -36,7 +39,7 @@ executor <- function (...)
   #      are changes while creating the executor
   
   # make the call and pass arguments
-  do.call('entry', list(...), envir = exec_env)
+  do.call('entry', args, envir = exec_env)
 }
 
 

@@ -61,6 +61,8 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
   # --- prepare and return the deferred execution function object
   
   executor <- defer:::executor
+  formals(executor) <- formals(deps$entry)
+  
   exec_env <- environment(executor) <- new.env(parent = eval_env)
   
   exec_env$function_deps <- processor$function_deps
