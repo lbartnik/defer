@@ -218,7 +218,8 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     
     process_library = function (name, fun) {
       pkg_name <- environmentName(environment(fun))
-      new_dep  <- data_frame(fun = name, pkg = pkg_name, ver = 1)
+      pkg_ver  <- as.character(packageVersion(pkg_name))
+      new_dep  <- data_frame(fun = name, pkg = pkg_name, ver = pkg_ver)
       
       self$library_deps <- rbind(self$library_deps, new_dep)
     },

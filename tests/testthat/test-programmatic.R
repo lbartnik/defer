@@ -41,7 +41,7 @@ test_that("library functions are not packaged but recorded", {
   expect_named(libs, c('fun', 'pkg', 'ver'))
   expect_equal(libs$fun, 'summary')
   expect_equal(libs$pkg, 'base')
-  expect_equal(libs$ver, 1)
+  expect_equal(libs$ver, as.character(packageVersion("base")))
 })
 
 
@@ -92,7 +92,7 @@ test_that("unnamed symbols can be passed in ...", {
   deps <- extract_dependencies(df)
   expect_equal(deps$fun, "summary")
   expect_equal(deps$pkg, "base")
-  expect_equal(deps$ver, 1)
+  expect_equal(deps$ver, as.character(packageVersion("base")))
 })
 
 

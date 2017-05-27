@@ -35,9 +35,6 @@ executor <- function ()
     
   # TODO add library deps
   
-  # TODO use match.call or something similar to pass arguments if they
-  #      are changes while creating the executor
-  
   # make the call and pass arguments
   do.call('entry', args, envir = exec_env)
 }

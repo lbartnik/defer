@@ -23,7 +23,7 @@ test_that("single variable dependency", {
 
 
 test_that("variable and function", {
-  d <- defer_(function()f(), f = function()x, x = 1)
+  d <- defer_(function(...)f(), f = function()x, x = 1)
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
