@@ -3,7 +3,7 @@
 executor <- function ()
 {
   # fist save the arguments
-  args <- as.list(environment())
+  args <- c(as.list(environment()), list(...))
 
   ee <- parent.env(environment())
   stopifnot(exists("function_deps", envir = ee, inherits = FALSE),
@@ -16,7 +16,7 @@ executor <- function ()
   
   # make sure each function will search in exec_env by setting either
   # it parent (regular functions) or grandparent (closures) to exec_env
-  mapply(function(f, n) {
+  process_fun <- function(f, n) {
     # do not remove environment from a closure; package_ sets env
     # to emptyenv() unless it's a closure
     if (identical(environment(f), emptyenv()))
@@ -25,7 +25,8 @@ executor <- function ()
       parent.env(environment(f)) <- exec_env
     
     assign(n, f, envir = exec_env)
-  }, f = function_deps, n = names(function_deps))
+  }
+  mapply(process_fun, f = function_deps, n = names(function_deps))
 
   # set variables
   mapply(function(v, n) {

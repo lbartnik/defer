@@ -109,3 +109,20 @@ test_that("extract function and variable", {
   expect_is(d, "deferred")
   expect_equal(d(), 1)
 })
+
+
+test_that("function with ...", {
+  d <- defer_(function(...)list(...), .extract = TRUE)
+  expect_equal(d(1), list(1))
+  expect_equal(d(a = 1), list(a = 1))
+})
+
+
+test_that("function with named args and ...", {
+  d <- defer_(function(a, ...)list(a = a, ...), .extract = TRUE)
+  expect_equal(d(1), list(a = 1))
+  expect_equal(d(a = 1), list(a = 1))
+  expect_equal(d(a = 1, 2), list(a = 1, 2))
+  expect_equal(d(a = 1, b = 2), list(a = 1, b = 2))
+})
+

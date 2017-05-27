@@ -61,14 +61,17 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
   # --- prepare and return the deferred execution function object
   
   executor <- defer:::executor
-  formals(executor) <- formals(deps$entry)
-  
   exec_env <- environment(executor) <- new.env(parent = eval_env)
   
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps
   exec_env$variables     <- processor$variable_deps
   
+  formals(executor) <- formals(deps$entry)
+  if (match("...", names(formals(executor)), 0) == 0) {
+    formals(executor) <- c(formals(executor), alist(...=))  
+  }
+
   class(executor) <- c("deferred", "function")
   
   executor
@@ -260,7 +263,9 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         
         if (exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
           f_obj <- get(f_name, envir = private$caller_env)
-          private$deps[[f_name]] <- f_obj
+          if (!is.primitive(f_obj)) {
+            private$deps[[f_name]] <- f_obj
+          }
         }
         
         return(recurse(x[-1]))
