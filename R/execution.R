@@ -12,6 +12,7 @@ executor <- function ()
   stopifnot('entry' %in% names(function_deps))
 
   # create the execution environment
+  libs_env <- new.env(parent = parent.frame(2))
   exec_env <- new.env(parent = parent.frame(2))
   
   # make sure each function will search in exec_env by setting either
@@ -34,7 +35,25 @@ executor <- function ()
   }, v = variables, n = names(variables))
   
     
-  # TODO add library deps
+  # add library deps
+  # load them into a separate environment in case the order of loading
+  # packages matters
+  process_library_dep <- function (fun, pkg, ver) {
+    if (!require(pkg, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)) {
+      stop("cannot load package ", pkg, ", aborting...", call. = FALSE)
+    }
+    if (!identical(as.character(getNamespaceVersion(pkg)), ver)) {
+      warning("version mismatch for package ", pkg, call. = FALSE)
+    }
+    fun_obj <- get(fun, envir = getNamespace(pkg), mode = "function", inherits = FALSE)
+    if (is.null(fun_obj)) {
+      stop("could not extract ", fun, " from package ", pkg, ", aborting...", call. = FALSE)
+    }
+    assign(fun, fun_obj, envir = libs_env)
+  }
+  with(library_deps, {
+    mapply(process_library_dep, fun = fun, pkg = pkg, ver = ver)
+  })
   
   # make the call and pass arguments
   do.call('entry', args, envir = exec_env)
