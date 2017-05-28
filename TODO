@@ -1,2 +1,4 @@
 * refresh docs
 * create an introductory vignette
+* verify that saveRDS and readRDS work with defer
+* implement edge cases: %>%
