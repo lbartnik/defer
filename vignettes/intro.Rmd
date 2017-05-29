@@ -1,0 +1,87 @@
+---
+title: "Introduction to Deferred Execution in R"
+author: "Lukasz A. Bartnik"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Deferred Execution in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Introduction
+
+1. R is made for remote execution - functions are objects and everything can be discovered at runtime
+2. a proof of that is the proliferation of varios remote execution mechanisms in R: foreach, opencpu, Rserve, SparklyR, the (planned) extension for dplyr::do
+3. one thing in common, that could be but hasn't been actually abstracted, is the preparation of the remote "package" - where the user-provided function and its dependencies are put together and made ready for execution in a separate R session
+4. with this package I intend to close that gap and propose a universal mechanism of preparing an "deferred execution package" that can be used to offload computation with any of the beforementioned packages
+
+## An Example
+
+Let's say we have a simple modelling pipeline that consists of:
+
+  1. an `etl` function
+  2. a modelling function
+  3. a test function
+  4. a top-level function that glues it all together
+  
+Here's the "glue" function and the rest, for the sake of simplicity, is defined at the end of this vignette.
+
+```{r}
+glue <- function (data, test_size) {
+  data  <- etl(data)
+  test  <- sample.int(seq(nrow(data)), test_size)
+  train <- setdiff(seq(nrow(data)), test)
+  
+  m <- model(data[train, ])
+  verify(data[test, ])
+}
+```
+
+
+Here's how we can package our simple pipeline and prepare it for a remote execution:
+
+```{r}
+library(defer)
+
+
+```
+
+
+## Source code
+
+```{r}
+verify <- function (model, test_data) {
+  test_data$predicted <- predict(model, test_data) > .5
+  with(test_data, predicted == is_setosa)
+}
+```
+
+```{r}
+model <- function (train_data) {
+  glm(is_setosa ~ petal_area + sepal_area, data = train_data)
+}
+```
+
+```{r}
+etl <- function (data) {
+  names(data) <- tolower(names(data))
+  names(data) <- gsub("\\.", "_", names(data))
+  
+  data$sepal_area    <- with(data, sepal_width * sepal_length)
+  data$petal_area    <- with(data, petal_width * petal_length)
+  data$is_setosa     <- data$species == "setosa"
+  data$is_virginica  <- data$species == "virginica"
+  data$is_versicolor <- data$species == "versicolor"
+  data$species       <- NULL
+  
+  data
+}
+```
+

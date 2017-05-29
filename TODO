@@ -1,3 +1,4 @@
+* warning messages in interactive mode similar to readr::read_csv
 * refresh docs
 * create an introductory vignette
 * verify that saveRDS and readRDS work with defer
