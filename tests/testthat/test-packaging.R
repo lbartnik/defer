@@ -1,4 +1,4 @@
-context("non-interactive")
+context("packaging")
 
 
 test_that("single function", {
@@ -93,46 +93,72 @@ test_that("unnamed dots", {
 })
 
 
-test_that("extract function", {
-  f <- function()1
-  d <- defer_(function()f(), .extract = TRUE)
-
-  expect_is(d, "deferred")
-  expect_equal(d(), 1)
-})
-
-
-test_that("extract variable", {
-  x <- 1
-  d <- defer_(function()x, .extract = TRUE)
-  
-  expect_is(d, "deferred")
-  expect_equal(d(), 1)
-})
-
-
-test_that("extract function and variable", {
-  x <- 1
-  f <- function()x
-  d <- defer_(function()f(), .extract = TRUE)
-  
-  expect_is(d, "deferred")
-  expect_equal(d(), 1)
-})
-
-
-test_that("function with ...", {
-  d <- defer_(function(...)list(...), .extract = TRUE)
+test_that("formals with ...", {
+  d <- defer_(function(...)list(...))
   expect_equal(d(1), list(1))
   expect_equal(d(a = 1), list(a = 1))
 })
 
 
-test_that("function with named args and ...", {
-  d <- defer_(function(a, ...)list(a = a, ...), .extract = TRUE)
+test_that("formals with named args and ...", {
+  d <- defer_(function(a, ...)list(a = a, ...))
   expect_equal(d(1), list(a = 1))
   expect_equal(d(a = 1), list(a = 1))
   expect_equal(d(a = 1, 2), list(a = 1, 2))
   expect_equal(d(a = 1, b = 2), list(a = 1, b = 2))
 })
+
+
+test_that("%>% is recognized as regular dependency", {
+  skip_if_not_installed("magrittr")
+  
+  d <- defer_(function(x)f(x), f = . %>% abs)
+  
+  expect_is(d, 'deferred')
+  expect_setequal(extract_functions(d), c('entry', 'f'))
+  expect_equal(d(-1), 1)
+})
+
+
+test_that("handling errors in .dots", {
+  # unnamed
+  expect_error(defer_(function(){}, .dots = list(function(){})),
+               "some elements in `.dots` are not named and names cannot be auto-generated")
+  
+  # not a function
+  expect_error(defer_(function(){}, 1),
+               "some arguments passed in ... are not named and names cannot be auto-generated")
+  
+  # name conflict
+  expect_error(defer_(function(){}, f = function(){}, .dots = list(f = function(){})),
+               "names in ... and `.dots` cannot overlap")
+})
+
+
+test_that("simple execution", {
+  f   <- mock(1, 2)
+  d <- defer_(f)
+  
+  expect_equal(d(1, 2), 1)
+  expect_equal(d(3, 4), 2)
+  
+  expect_called(f, 2)
+  expect_args(f, 1, 1, 2)
+  expect_args(f, 2, 3, 4)
+})
+
+
+test_that("nested execution", {
+  m <- mock(1)
+  f <- function(...) g(...)
+  
+  # mock is passed under a different name to verify that f() doesn't reach
+  # back to *this* environment
+  d <- defer_(f, g = m)
+  
+  expect_equal(d(1, 2), 1)
+  expect_called(m, 1)
+  expect_args(m, 1, 1, 2)
+})
+
 
