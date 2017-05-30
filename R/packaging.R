@@ -161,9 +161,14 @@ make_all_named <- function (args)
 
 is_library_dependency <- function (x)
 {
-  isNamespace(environment(x))
+  is.function(x) && isNamespace(environment(x))
 }
 
+is_closure <- function (x, caller_env)
+{
+  !identical(environment(x), caller_env) &&
+    !identical(environment(x), globalenv())
+}
 
 
 library(R6)
@@ -231,7 +236,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     # remove environment from a function unless it's a closure
     #
     process_function = function (name, fun) {
-      if (identical(environment(fun), private$caller_env)) {
+      if (!is_closure(fun, private$caller_env)) {
         environment(fun) <- emptyenv()
       }
       self$function_deps[[name]] <- fun
@@ -251,7 +256,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       
       if (is.name(x)) {
         v_name <- as.character(x)
-        if (exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
+        if (nchar(v_name) && exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
           self$variable_deps[[v_name]] <- get(v_name, envir = private$caller_env)
         }
       }

@@ -95,6 +95,7 @@ test_that("unnamed dots", {
 
 test_that("formals with ...", {
   d <- defer_(function(...)list(...))
+  expect_is(d, "deferred")
   expect_equal(d(1), list(1))
   expect_equal(d(a = 1), list(a = 1))
 })
@@ -102,6 +103,7 @@ test_that("formals with ...", {
 
 test_that("formals with named args and ...", {
   d <- defer_(function(a, ...)list(a = a, ...))
+  expect_is(d, "deferred")
   expect_equal(d(1), list(a = 1))
   expect_equal(d(a = 1), list(a = 1))
   expect_equal(d(a = 1, 2), list(a = 1, 2))
@@ -138,6 +140,8 @@ test_that("handling errors in .dots", {
 test_that("simple execution", {
   f   <- mock(1, 2)
   d <- defer_(f)
+
+  expect_is(d, "deferred")
   
   expect_equal(d(1, 2), 1)
   expect_equal(d(3, 4), 2)
@@ -156,9 +160,19 @@ test_that("nested execution", {
   # back to *this* environment
   d <- defer_(f, g = m)
   
+  expect_is(d, "deferred")
   expect_equal(d(1, 2), 1)
   expect_called(m, 1)
   expect_args(m, 1, 1, 2)
 })
 
+
+test_that("drop global env", {
+  f <- function(){}
+  environment(f) <- globalenv()
+  
+  d <- defer_(f)
+  expect_is(d, "deferred")
+  expect_identical(environment(environment(d)$function_deps$entry), emptyenv())
+})
 
