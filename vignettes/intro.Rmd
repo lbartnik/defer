@@ -24,52 +24,20 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 ## An Example
 
-Let's say we have a simple modelling pipeline that consists of:
-
-  1. an `etl` function
-  2. a modelling function
-  3. a test function
-  4. a top-level function that glues it all together
-  
-Here's the "glue" function and the rest, for the sake of simplicity, is defined at the end of this vignette.
-
-```{r}
-glue <- function (data, test_size) {
-  data  <- etl(data)
-  test  <- sample.int(seq(nrow(data)), test_size)
-  train <- setdiff(seq(nrow(data)), test)
-  
-  m <- model(data[train, ])
-  verify(data[test, ])
-}
-```
-
-
-Here's how we can package our simple pipeline and prepare it for a remote execution:
-
-```{r}
-library(defer)
-
-
-```
-
-
-## Source code
-
-```{r}
+```{r verify, echo=FALSE}
 verify <- function (model, test_data) {
   test_data$predicted <- predict(model, test_data) > .5
   with(test_data, predicted == is_setosa)
 }
 ```
 
-```{r}
+```{r model, echo=FALSE}
 model <- function (train_data) {
-  glm(is_setosa ~ petal_area + sepal_area, data = train_data)
+  lm(is_setosa ~ petal_area + sepal_area, data = train_data)
 }
 ```
 
-```{r}
+```{r etl, echo=FALSE}
 etl <- function (data) {
   names(data) <- tolower(names(data))
   names(data) <- gsub("\\.", "_", names(data))
@@ -85,3 +53,61 @@ etl <- function (data) {
 }
 ```
 
+
+Let's say we have a simple modelling pipeline that consists of:
+
+  1. an `etl` function
+  2. a modelling function
+  3. a test function
+  4. a top-level function that glues it all together
+  
+Here's the "glue" function and the rest, for the sake of simplicity, is defined at the end of this vignette.
+
+```{r}
+glue <- function (data, test_size) {
+  data  <- etl(data)
+  test  <- sample.int(nrow(data), test_size)
+  train <- setdiff(seq(nrow(data)), test)
+  
+  m <- model(data[train, ])
+  mean(verify(m, data[test, ]))
+}
+```
+
+Let's run this simple example - locally:
+
+```{r}
+glue(iris, 50)
+```
+
+Here's how we can package our simple pipeline and prepare it for a remote execution:
+
+```{r}
+library(defer)
+
+d <- defer(glue)
+```
+
+Now we "simulate" serializing the deferred function and then running it in a new R session. 
+
+```{r}
+storage_path <- tempfile(fileext = 'rds')
+saveRDS(d, storage_path)
+rm(d, glue, etl, verify, model) # removing these functions "simulates" a new R session
+ls()
+
+d <- readRDS(storage_path)
+d(iris, 50)
+```
+
+
+## Source code
+
+```{r verify}
+```
+
+```{r model}
+```
+
+```{r etl}
+```
