@@ -55,6 +55,3 @@ function names that come from other R packages. Each function
 name (vector value) has a corresponding package name set in
 \code{\link{names}}.
 }
-\seealso{
-\code{\link[defer]{execute}}
-}

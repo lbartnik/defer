@@ -1,2 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+.vscode
+.travis.yml
+README.md
+TODO

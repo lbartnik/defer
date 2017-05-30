@@ -23,8 +23,7 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #' @return A deferred function object.
 #'
 #' @export
-#' @rdname package
-#' @seealso \code{\link[defer]{execute}}
+#' @rdname packaging
 #'
 #' @importFrom rlang quos eval_tidy caller_env
 #'
@@ -85,7 +84,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
 #' @return \code{TRUE} or \code{FALSE}.
 #' @export
 #'
-#' @rdname package
+#' @rdname packaging
 #'
 is_deferred <- function (x) inherits(x, 'deferred')
 
@@ -97,7 +96,7 @@ is_deferred <- function (x) inherits(x, 'deferred')
 #' @return A vector of function names.
 #'
 #' @export
-#' @rdname package
+#' @rdname packaging
 #'
 extract_functions <- function (df)
 {
@@ -117,7 +116,7 @@ extract_functions <- function (df)
 #' functions that belong to other R packages.
 #'
 #' @export
-#' @rdname package
+#' @rdname packaging
 #'
 extract_dependencies <- function (df)
 {
@@ -174,6 +173,7 @@ is_closure <- function (x, caller_env)
 library(R6)
 
 #' @importFrom rlang caller_env
+#' @importFrom R6 R6Class
 DependencyProcessor<- R6::R6Class("DependencyProcessor",
   public = list(
     library_deps  = data.frame(pkg = character(), fun = character(), ver = character(),

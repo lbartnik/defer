@@ -27,12 +27,12 @@ executor <- function ()
     
     assign(n, f, envir = exec_env)
   }
-  mapply(process_fun, f = function_deps, n = names(function_deps))
+  mapply(process_fun, f = ee$function_deps, n = names(ee$function_deps))
 
   # set variables
   mapply(function(v, n) {
     assign(n, v, envir = exec_env)
-  }, v = variables, n = names(variables))
+  }, v = ee$variables, n = names(ee$variables))
   
     
   # add library deps
@@ -51,7 +51,7 @@ executor <- function ()
     }
     assign(fun, fun_obj, envir = libs_env)
   }
-  with(library_deps, {
+  with(ee$library_deps, {
     mapply(process_library_dep, fun = fun, pkg = pkg, ver = ver)
   })
   
@@ -68,18 +68,3 @@ run_deferred <- function (df, ...)
 }
 
 
-#' @export
-print.deferred <- function (x)
-{
-  stopifnot(is.function(x))
-  ee <- environment(x)
-
-  cat("Deferred-execution function\n")
-  
-  cat("Dependencies: ", setdiff(names(ee$function_deps), 'entry'))
-  cat("\n\n")
-  
-  cat("Entry function:\n")
-  
-  print(ee$function_deps$entry)
-}
