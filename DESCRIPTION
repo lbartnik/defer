@@ -13,7 +13,10 @@ Suggests:
   mockery,
   testthat,
   knitr,
-  rmarkdown (>= 1.0)
+  rmarkdown (>= 1.0),
+  dplyr,
+  lubridate,
+  magrittr
 Imports:
     rlang,
     R6
