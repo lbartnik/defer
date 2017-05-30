@@ -1,0 +1,23 @@
+language: r
+cache: packages
+sudo: false
+compiler:
+  - g++
+r_build_args: --no-build-vignettes
+r_check_args: --no-manual --timings
+matrix:
+  include:
+    - os: linux
+      r: release
+    - os: linux
+      r: devel
+    - os: osx
+      osx_image: xcode8
+      r: release
+r_packages:
+  - covr
+
+# Only report coverage for the release version
+after_success:
+  - test $TRAVIS_R_VERSION_STRING = 'release' && Rscript -e 'covr::codecov()'
+
