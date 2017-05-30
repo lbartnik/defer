@@ -9,6 +9,7 @@
 #'
 #' @param entry Entry-point function.
 #' @param ... List of dependencies, functions and variables.
+#' @param .dots A list of functions or quosures (see \code{\link[rlang]{quos}}).
 #' @param .extract Whether to analyze functions and extract dependencies
 #'        from their code.
 #' 
@@ -71,7 +72,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
 
   # --- prepare and return the deferred execution function object
   
-  executor <- defer:::executor
+  executor <- executor
   exec_env <- environment(executor) <- new.env(parent = eval_env)
   
   exec_env$function_deps <- processor$function_deps

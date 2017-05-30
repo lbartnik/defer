@@ -17,6 +17,8 @@ is_deferred(x)
 
 \item{...}{List of dependencies, functions and variables.}
 
+\item{.dots}{A list of functions or quosures (see \code{\link[rlang]{quos}}).}
+
 \item{.extract}{Whether to analyze functions and extract dependencies
 from their code.}
 

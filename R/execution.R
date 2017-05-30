@@ -1,6 +1,6 @@
 
 
-executor <- function ()
+executor <- function (...)
 {
   # fist save the arguments
   args <- c(as.list(environment()), list(...))
@@ -9,7 +9,7 @@ executor <- function ()
   stopifnot(exists("function_deps", envir = ee, inherits = FALSE),
             exists("library_deps", envir = ee, inherits = FALSE),
             exists("variables", envir = ee, inherits = FALSE))
-  stopifnot('entry' %in% names(function_deps))
+  stopifnot('entry' %in% names(ee$function_deps))
 
   # create the execution environment
   libs_env <- new.env(parent = parent.frame(2))
@@ -60,11 +60,19 @@ executor <- function ()
 }
 
 
+#' Run the deferred function.
+#' 
+#' An explicit way to signify that a function being run is actually
+#' a \code{deferred} function wrapper.
+#' 
+#' @param df deferred function object.
+#' @param ... parameters passed to \code{df}.
+#' @return The return value of the wrapped function.
+#' 
 #' @export
+#' 
 run_deferred <- function (df, ...)
 {
   stopifnot(is_deferred(df))
   df(...)
 }
-
-

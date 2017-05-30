@@ -13,7 +13,7 @@ extract_functions(df)
 extract_dependencies(df)
 }
 \arguments{
-\item{pkg}{An execution package object.}
+\item{df}{deferred function object.}
 }
 \value{
 A vector of function names.

@@ -29,7 +29,7 @@ print.deferred <- function (x, ...)
 #' @description \code{list_functions} returns a \code{character} vector
 #' of names of functions packaged in \code{pkg}.
 #'
-#' @param pkg An execution package object.
+#' @param df deferred function object.
 #' @return A vector of function names.
 #'
 #' @export
