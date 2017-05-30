@@ -1,4 +1,9 @@
+* pass caller_env in the interactive mode defer()
+* improve print.deferred
 * warning messages in interactive mode similar to readr::read_csv
+* augment a package with an additional variable, function, etc. e.g. to remove
+  an argument from the function
+* do not extract a variable if it is among formals()
 * a vignette with examples for opencpu and Rserver, and maybe other packages
 * README.md for github, with code coverage labels
 * refresh docs

@@ -1,0 +1,27 @@
+---
+title: "Examples for Third-Party Packages"
+author: "Lukasz A. Bartnik"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Examples for Third-Party Packages}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+
+## foreach
+
+## opencpu
+
+## Rserve
+
+## SparkR
+
+## (planned) extension for dplyr::do

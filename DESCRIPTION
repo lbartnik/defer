@@ -1,22 +1,24 @@
 Package: defer
 Type: Package
-Title: Defer function evaluation.
-Version: 0.1
-Date: 2015-12-21
-Author: Lukasz A. Bartnik <l.bartnik@gmail.com>
-Maintainer: Lukasz A. Bartnik <l.bartnik@gmail.com>
+Title: Deferred function evaluation.
+Version: 0.3.0
+Authors@R: person("Lukasz", "Bartnik", email = "l.bartnik@gmail.com", role = c("aut", "cre"))
 Description: Serialize a function/code together with its
     dependencies in a way that enables future evaluation, possibly
     on a remote host.
-License: GPL3
+License: MIT + file LICENSE
+Depends:
+  R (>= 3.2.0)
+Suggests:
+  mockery,
+  testthat,
+  knitr,
+  rmarkdown (>= 1.0)
 Imports:
-    rlang
+    rlang,
+    R6
 Collate:
     'execution.R'
     'packaging.R'
-Suggests:
-    knitr,
-    mockery,
-    testthat
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1

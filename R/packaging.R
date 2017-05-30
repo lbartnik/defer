@@ -173,11 +173,11 @@ is_closure <- function (x, caller_env)
 
 library(R6)
 
-#' @importFrom dplyr data_frame
 #' @importFrom rlang caller_env
 DependencyProcessor<- R6::R6Class("DependencyProcessor",
   public = list(
-    library_deps  = data_frame(pkg = character(), fun = character(), ver = character()),
+    library_deps  = data.frame(pkg = character(), fun = character(), ver = character(),
+                               stringsAsFactors = FALSE),
     function_deps = list(),
     variable_deps = list(),
     
@@ -227,8 +227,8 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     process_library = function (name, fun) {
       pkg_name <- environmentName(environment(fun))
       pkg_ver  <- as.character(getNamespaceVersion(pkg_name))
-      new_dep  <- data_frame(fun = name, pkg = pkg_name, ver = pkg_ver)
-      
+      new_dep  <- data.frame(fun = name, pkg = pkg_name, ver = pkg_ver, stringsAsFactors = FALSE)
+
       self$library_deps <- rbind(self$library_deps, new_dep)
     },
     
