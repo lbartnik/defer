@@ -1,4 +1,24 @@
+#' Defer function execution.
+#' 
+#' Both \code{defer} and \code{defer_} create an execution package
+#' (wrapper) for any user-provided function.
+#' 
+#' \code{defer} is intended for interactive use - it assumes that
+#' dependencies should be extracted (\code{.extract} defaults to
+#' \code{TRUE}).
+#'
+#' @param entry Entry-point function.
+#' @param ... List of dependencies, functions and variables.
+#' @param .extract Whether to analyze functions and extract dependencies
+#'        from their code.
+#' 
+#' @return A \code{deferred} function object.
+#'
 #' @export
+#' @rdname defer
+#'
+#' @importFrom rlang quos eval_tidy caller_env
+#'
 defer <- function (entry, ..., .dots, .extract = TRUE)
 {
   dots <- quos(...)
@@ -11,22 +31,14 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 }
 
 
-#' Defer function execution - create an execution package.
-#'
-#' @param entry Entry-point function or a function name.
-#' @param ... List of dependencies, functions and variables.
-#' @param functions A list of functions.
-#' @param variables A list of variables.
-#' @param .extract Whether to analyze functions and extract dependencies
-#'        from their bodies.
+
+#' @description \code{defer_} is intended for non-interactive use. It
+#' provides an interface very similar to \code{defer} but by default
+#' turns off discovering dependencies (\code{.extract} is \code{FALSE}). 
 #' 
-#' @return A deferred function object.
-#'
 #' @export
-#' @rdname packaging
-#'
-#' @importFrom rlang quos eval_tidy caller_env
-#'
+#' @rdname defer
+#' 
 defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
@@ -78,52 +90,15 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
 
 
 #' @description \code{is_deferred} verifies if the given object
-#' is an execution package.
+#' is a \code{deferred} function wrapper.
 #'
 #' @param x Object to be tested.
 #' @return \code{TRUE} or \code{FALSE}.
 #' @export
 #'
-#' @rdname packaging
+#' @rdname defer
 #'
 is_deferred <- function (x) inherits(x, 'deferred')
-
-
-#' @description \code{list_functions} returns a \code{character} vector
-#' of names of functions packaged in \code{pkg}.
-#'
-#' @param pkg An execution package object.
-#' @return A vector of function names.
-#'
-#' @export
-#' @rdname packaging
-#'
-extract_functions <- function (df)
-{
-  stopifnot(is_deferred(df))
-  ee <- environment(df)
-  return(names(ee$function_deps))
-}
-
-
-
-#' \code{list_dependencies} returns a \code{character} vector of
-#' function names that come from other R packages. Each function
-#' name (vector value) has a corresponding package name set in
-#' \code{\link{names}}.
-#'
-#' @return \code{list_dependencies} returns a named vector of
-#' functions that belong to other R packages.
-#'
-#' @export
-#' @rdname packaging
-#'
-extract_dependencies <- function (df)
-{
-  stopifnot(is_deferred(df))
-  ee <- environment(df)
-  return(ee$library_deps)
-}
 
 
 # ---------------------------------------------------------------------
