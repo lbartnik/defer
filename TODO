@@ -1,5 +1,6 @@
 * warning messages in interactive mode similar to readr::read_csv
+* a vignette with examples for opencpu and Rserver, and maybe other packages
+* README.md for github, with code coverage labels
 * refresh docs
 * create an introductory vignette
-* verify that saveRDS and readRDS work with defer
 * implement edge cases: %>%
