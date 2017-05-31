@@ -29,7 +29,7 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
   }
 
   .caller_env <- caller_env()
-  defer_(entry, .dots = dots, .extract = .extract, .caller_env = .caller_env, .verbose = TRUE)
+  defer_(entry, .dots = dots, .extract = .extract, .caller_env = .caller_env, .verbosity = 1)
 }
 
 
@@ -44,21 +44,22 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #'        and it is used in the interactive version, \code{defer()}, which
 #'        passes its own \code{caller_env()} to \code{defer_()}.
 #'
-#' @param .verbose Produce additional output for the user. Set to
-#'        \code{TRUE} when in interactive mode, that is, when called
-#'        from \code{defer()}.
+#' @param .verbosity Accepts values 0, 1 and 2. 0 means quiet, 1 and 2
+#'        result in additional output for the user. Set to \code{1} when
+#'        in interactive mode, that is, when called from \code{defer()}.
 #' 
 #' @export
 #' @rdname defer
 #' @importFrom rlang caller_env
 #' 
-defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbose = FALSE)
+defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbosity = 1)
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
   # entry must be a regular function
   stopifnot(is.function(entry))
   stopifnot(is.list(.dots))
+  stopifnot(.verbosity %in% 0:2)
   
   # capture expressions with quos() and make sure all element are named
   dots  <- quos(...)
@@ -79,7 +80,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   deps <- c(dots, .dots, list(entry = entry))
 
   processor <- DependencyProcessor$new(deps, .caller_env)
-  processor$run(.extract, .verbose)
+  processor$run(.extract, .verbosity)
 
   # --- prepare and return the deferred execution function object
   
@@ -178,11 +179,12 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     # 3. extract library functions
     # 4. nothing else should be left
     #
-    run = function (extract = FALSE, verbose = FALSE)
+    run = function (extract = FALSE, verbosity = FALSE)
     {
       private$extract   <- extract
-      private$beVerbose <- verbose
+      private$verbosity <- verbosity
       private$process()
+      private$summary()
     }
   ),
   private = list(
@@ -190,7 +192,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     processed  = list(),
     caller_env = NA,
     extract    = FALSE,
-    beVerbose  = FALSE,
+    verbosity  = 0,
 
     process = function () {
       while (length(private$deps)) {
@@ -279,9 +281,30 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
     
     verbose = function (...) {
-      if (isTRUE(private$beVerbose)) {
+      if (identical(private$verbosity, 2)) {
         message(paste(..., collapse = " ", sep = ""))
       }
+    },
+    
+    summary = function () {
+      if (!identical(private$verbosity, 1) && !identical(private$verbosity, 2)) return()
+      message("Found ",
+              ifelse(!length(self$function_deps), "",
+                     paste0("functions:\n",
+                            strwrap(paste(names(self$function_deps), collapse = ", "),
+                                    prefix = "  "),
+                            "\n")),
+              ifelse(!length(self$variables), "",
+                     paste0("variables:\n",
+                            strwrap(paste(names(self$variables), collapse = ", "),
+                                    prefix = "  "),
+                            "\n")),
+              ifelse(!nrow(self$library_deps), "",
+                     paste0("library calls:\n",
+                            strwrap(paste0(self$library_deps$pkg, '::', self$library_deps$fun, collapse = ", "),
+                                    prefix = "  "),
+                            "\n"))
+      )
     }
   )
 )
