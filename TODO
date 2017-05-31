@@ -1,5 +1,4 @@
 * improve print.deferred
-* warning messages in interactive mode similar to readr::read_csv
 * augment a package with an additional variable, function, etc. e.g. to remove
   an argument from the function
 * add another example in a vignette, where the data set is packaged together
