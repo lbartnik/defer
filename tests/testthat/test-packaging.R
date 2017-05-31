@@ -117,7 +117,7 @@ test_that("%>% is recognized as regular dependency", {
   d <- defer_(function(x)f(x), f = . %>% abs)
   
   expect_is(d, 'deferred')
-  expect_setequal(extract_functions(d), c('entry', 'f'))
+  expect_setequal(names(extract_functions(d)), c('entry', 'f'))
   expect_equal(d(-1), 1)
 })
 
@@ -173,6 +173,17 @@ test_that("drop global env", {
   
   d <- defer_(f)
   expect_is(d, "deferred")
-  expect_identical(environment(environment(d)$function_deps$entry), emptyenv())
+  expect_identical(environment(extract_functions(d)$entry), emptyenv())
+})
+
+
+test_that("caller env is passed", {
+  d <- (function(){defer(function(){})})()
+  
+  # if caller_env is not passed from defer() to defer_(), the entry
+  # function is assumed to be a clousure and keeps its environment;
+  # it caller_env is passed, that environment is set to empty
+  expect_is(d, "deferred")
+  expect_identical(environment(extract_functions(d)$entry), emptyenv())
 })
 

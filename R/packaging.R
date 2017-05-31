@@ -28,7 +28,8 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
     dots <- c(dots, .dots)
   }
 
-  defer_(entry, .dots = dots, .extract = .extract)
+  .caller_env <- caller_env()
+  defer_(entry, .dots = dots, .extract = .extract, .caller_env = .caller_env)
 }
 
 
@@ -37,10 +38,17 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #' provides an interface very similar to \code{defer} but by default
 #' turns off discovering dependencies (\code{.extract} is \code{FALSE}). 
 #' 
+#' @param .caller_env The environment where \code{defer_()} is supposed to
+#'        assume the call was made and the wrapper is returned to. Its
+#'        value is important when \code{.extract} is set to \code{TRUE},
+#'        and it is used in the interactive version, \code{defer()}, which
+#'        passes its own \code{caller_env()} to \code{defer_()}.
+#' 
 #' @export
 #' @rdname defer
+#' @importFrom rlang caller_env
 #' 
-defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
+defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env())
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
@@ -65,15 +73,14 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE)
 
   # --- put all dependencies together and then extract each category one by one
   deps <- c(dots, .dots, list(entry = entry))
-  eval_env <- caller_env()
-  
-  processor <- DependencyProcessor$new(deps, eval_env)
+
+  processor <- DependencyProcessor$new(deps, .caller_env)
   processor$run(.extract)
 
   # --- prepare and return the deferred execution function object
   
   executor <- executor
-  exec_env <- environment(executor) <- new.env(parent = eval_env)
+  exec_env <- environment(executor) <- new.env(parent = .caller_env)
   
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps

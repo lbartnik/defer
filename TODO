@@ -1,4 +1,3 @@
-* pass caller_env in the interactive mode defer()
 * improve print.deferred
 * warning messages in interactive mode similar to readr::read_csv
 * augment a package with an additional variable, function, etc. e.g. to remove
