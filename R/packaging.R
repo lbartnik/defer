@@ -29,7 +29,7 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
   }
 
   .caller_env <- caller_env()
-  defer_(entry, .dots = dots, .extract = .extract, .caller_env = .caller_env)
+  defer_(entry, .dots = dots, .extract = .extract, .caller_env = .caller_env, .verbose = TRUE)
 }
 
 
@@ -43,12 +43,16 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #'        value is important when \code{.extract} is set to \code{TRUE},
 #'        and it is used in the interactive version, \code{defer()}, which
 #'        passes its own \code{caller_env()} to \code{defer_()}.
+#'
+#' @param .verbose Produce additional output for the user. Set to
+#'        \code{TRUE} when in interactive mode, that is, when called
+#'        from \code{defer()}.
 #' 
 #' @export
 #' @rdname defer
 #' @importFrom rlang caller_env
 #' 
-defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env())
+defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbose = FALSE)
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
@@ -75,7 +79,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   deps <- c(dots, .dots, list(entry = entry))
 
   processor <- DependencyProcessor$new(deps, .caller_env)
-  processor$run(.extract)
+  processor$run(.extract, .verbose)
 
   # --- prepare and return the deferred execution function object
   
@@ -174,9 +178,10 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     # 3. extract library functions
     # 4. nothing else should be left
     #
-    run = function (extract = FALSE)
+    run = function (extract = FALSE, verbose = FALSE)
     {
-      private$extract <- extract
+      private$extract   <- extract
+      private$beVerbose <- verbose
       private$process()
     }
   ),
@@ -185,6 +190,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     processed  = list(),
     caller_env = NA,
     extract    = FALSE,
+    beVerbose  = FALSE,
 
     process = function () {
       while (length(private$deps)) {
@@ -212,6 +218,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       pkg_ver  <- as.character(getNamespaceVersion(pkg_name))
       new_dep  <- data.frame(fun = name, pkg = pkg_name, ver = pkg_ver, stringsAsFactors = FALSE)
 
+      private$verbose("Adding library call: ", pkg_name, '::', name)
       self$library_deps <- rbind(self$library_deps, new_dep)
     },
     
@@ -222,11 +229,18 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       if (!is_closure(fun, private$caller_env)) {
         environment(fun) <- emptyenv()
       }
+
+      private$verbose("Adding function: ", name)
       self$function_deps[[name]] <- fun
-      if (isTRUE(private$extract)) private$process_body(body(fun))
+      
+      if (isTRUE(private$extract)) {
+        private$verbose("Processing function: ", name)
+        private$process_body(body(fun))
+      }
     },
     
     process_variable = function (name, value) {
+      private$verbose("Adding variable: ", name)
       self$variable_deps[[name]] <- value
     },
     
@@ -241,6 +255,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         v_name <- as.character(x)
         if (nchar(v_name) && exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
           self$variable_deps[[v_name]] <- get(v_name, envir = private$caller_env)
+          private$verbose("  - adding candidate variable: ", v_name)
         }
       }
       else if (is.call(x)) {
@@ -253,6 +268,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
           f_obj <- get(f_name, envir = private$caller_env)
           if (!is.primitive(f_obj)) {
             private$deps[[f_name]] <- f_obj
+            private$verbose("  - adding candidate function: ", f_name)
           }
         }
         
@@ -260,6 +276,12 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       }
       
       if (is.recursive(x)) recurse(x)
+    },
+    
+    verbose = function (...) {
+      if (isTRUE(private$beVerbose)) {
+        message(paste(..., collapse = " ", sep = ""))
+      }
     }
   )
 )
