@@ -39,7 +39,7 @@ extract_functions <- function (df)
 {
   stopifnot(is_deferred(df))
   ee <- environment(df)
-  return(names(ee$function_deps))
+  return(ee$function_deps)
 }
 
 

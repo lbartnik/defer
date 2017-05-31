@@ -6,7 +6,7 @@ test_that("function can be listed", {
   d <- defer_(function()f()+g(), f, g)
   
   expect_is(d, 'deferred')
-  expect_setequal(extract_functions(d), c('entry', 'f', 'g'))
+  expect_setequal(names(extract_functions(d)), c('entry', 'f', 'g'))
 })
 
 
@@ -14,7 +14,7 @@ test_that("library functions are not packaged but recorded", {
   d <- defer_(function(){}, summary = summary)
 
   expect_is(d, 'deferred')
-  expect_equal(extract_functions(d), 'entry')
+  expect_equal(names(extract_functions(d)), 'entry')
 
   libs <- extract_dependencies(d)
   expect_named(libs, c('fun', 'pkg', 'ver'))

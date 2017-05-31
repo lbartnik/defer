@@ -8,7 +8,8 @@
 \usage{
 defer(entry, ..., .dots, .extract = TRUE)
 
-defer_(entry, ..., .dots = list(), .extract = FALSE)
+defer_(entry, ..., .dots = list(), .extract = FALSE,
+  .caller_env = caller_env())
 
 is_deferred(x)
 }
@@ -21,6 +22,12 @@ is_deferred(x)
 
 \item{.extract}{Whether to analyze functions and extract dependencies
 from their code.}
+
+\item{.caller_env}{The environment where \code{defer_()} is supposed to
+assume the call was made and the wrapper is returned to. Its
+value is important when \code{.extract} is set to \code{TRUE},
+and it is used in the interactive version, \code{defer()}, which
+passes its own \code{caller_env()} to \code{defer_()}.}
 
 \item{x}{Object to be tested.}
 }
