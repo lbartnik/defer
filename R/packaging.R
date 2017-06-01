@@ -180,7 +180,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     # 3. extract library functions
     # 4. nothing else should be left
     #
-    run = function (extract = FALSE, verbosity = FALSE)
+    run = function (extract = FALSE, verbosity = 0)
     {
       private$extract   <- extract
       private$verbosity <- verbosity
