@@ -52,7 +52,7 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #' @rdname defer
 #' @importFrom rlang caller_env
 #' 
-defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbosity = 1)
+defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbosity = 0)
 {
   # TODO should library-function names be extracted even in the programmer's API?
 
@@ -63,6 +63,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   
   # capture expressions with quos() and make sure all element are named
   dots  <- quos(...)
+
   dots  <- tryCatch(eval_tidy(make_all_named(dots)), error = function(e) stop(
     "some arguments passed in ... are not named and names cannot be auto-generated", call. = FALSE))
   .dots <- tryCatch(eval_tidy(make_all_named(.dots)), error = function(e) stop(

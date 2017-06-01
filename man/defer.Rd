@@ -9,7 +9,7 @@
 defer(entry, ..., .dots, .extract = TRUE)
 
 defer_(entry, ..., .dots = list(), .extract = FALSE,
-  .caller_env = caller_env(), .verbosity = 1)
+  .caller_env = caller_env(), .verbosity = 0)
 
 is_deferred(x)
 }
