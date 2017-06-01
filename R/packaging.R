@@ -288,24 +288,12 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
     
     summary = function () {
-      if (!identical(private$verbosity, 1) && !identical(private$verbosity, 2)) return()
-      message("Found ",
-              ifelse(!length(self$function_deps), "",
-                     paste0("functions:\n",
-                            strwrap(paste(names(self$function_deps), collapse = ", "),
-                                    prefix = "  "),
-                            "\n")),
-              ifelse(!length(self$variables), "",
-                     paste0("variables:\n",
-                            strwrap(paste(names(self$variables), collapse = ", "),
-                                    prefix = "  "),
-                            "\n")),
-              ifelse(!nrow(self$library_deps), "",
-                     paste0("library calls:\n",
-                            strwrap(paste0(self$library_deps$pkg, '::', self$library_deps$fun, collapse = ", "),
-                                    prefix = "  "),
-                            "\n"))
-      )
+      if (identical(private$verbosity, 1) || identical(private$verbosity, 2)) {
+        formatted <- format_deferred(self)
+        if (nchar(formatted) > 0) {
+          message("Found ", formatted)
+        }
+      }
     }
   )
 )

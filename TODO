@@ -7,5 +7,6 @@
 * a vignette with examples for opencpu and Rserver, and maybe other packages
 * README.md for github, with code coverage labels
 * refresh docs
+* add functionality: dump deferred package to a R source file
 * create an introductory vignette
 * implement edge cases: %>%

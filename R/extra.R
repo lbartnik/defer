@@ -14,14 +14,40 @@ print.deferred <- function (x, ...)
   stopifnot(is.function(x), is_deferred(x))
   ee <- environment(x)
 
-  cat("Deferred-execution function\n")
-  
-  cat("Dependencies: ", setdiff(names(ee$function_deps), 'entry'))
-  cat("\n\n")
-  
+  cat("Deferred-execution package\n\n")
+
   cat("Entry function:\n")
+  cat(paste0("  ", format(ee$function_deps$entry), collapse = "\n"))
   
-  print(ee$function_deps$entry)
+  formatted <- format_deferred(ee)
+  if (nchar(formatted) > 0) {
+    cat("\n\nIncludes ")
+    cat(formatted)
+  }
+}
+
+
+format_deferred <- function (x, ...)
+{
+  function_names <- setdiff(names(x$function_deps), "entry")
+
+  paste0(
+    ifelse(!length(function_names), "",
+           paste0("functions:\n",
+                  strwrap(paste(function_names, collapse = ", "),
+                          prefix = "  "),
+                  "\n")),
+    ifelse(!length(x$variables), "",
+           paste0("variables:\n",
+                  strwrap(paste(names(x$variables), collapse = ", "),
+                          prefix = "  "),
+                  "\n")),
+    ifelse(!nrow(x$library_deps), "",
+           paste0("library calls:\n",
+                  strwrap(paste0(x$library_deps$pkg, '::', x$library_deps$fun, collapse = ", "),
+                          prefix = "  "),
+                  "\n"))
+  )
 }
 
 

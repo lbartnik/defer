@@ -8,6 +8,7 @@ library(defer)
 
 fun <- function(x)x*x
 deferred <- defer(fun)
+print(deferred)
 
 deferred(10)
 

@@ -12,7 +12,7 @@
 
 <meta name="author" content="Lukasz A. Bartnik" />
 
-<meta name="date" content="2017-05-31" />
+<meta name="date" content="2017-06-01" />
 
 <title>Introduction to Deferred Execution in R</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Introduction to Deferred Execution in R</h1>
 <h4 class="author"><em>Lukasz A. Bartnik</em></h4>
-<h4 class="date"><em>2017-05-31</em></h4>
+<h4 class="date"><em>2017-06-01</em></h4>
 
 
 
@@ -87,8 +87,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 fun &lt;-<span class="st"> </span>function(x)x*x
 deferred &lt;-<span class="st"> </span><span class="kw">defer</span>(fun)
-<span class="co">#&gt; Found functions:</span>
-<span class="co">#&gt;   entry</span>
+<span class="kw">print</span>(deferred)
+<span class="co">#&gt; Deferred-execution package</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; Entry function:</span>
+<span class="co">#&gt;   function (x) </span>
+<span class="co">#&gt;   x * x</span>
 
 <span class="kw">deferred</span>(<span class="dv">10</span>)
 <span class="co">#&gt; [1] 100</span></code></pre></div>
@@ -115,13 +119,13 @@ deferred &lt;-<span class="st"> </span><span class="kw">defer</span>(fun)
 }</code></pre></div>
 <p>Let’s run this simple example, first locally:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">glue</span>(iris, <span class="dv">50</span>)
-<span class="co">#&gt; [1] 0.98</span></code></pre></div>
+<span class="co">#&gt; [1] 1</span></code></pre></div>
 <p>Now we can package our simple pipeline and prepare it for a remote execution. <code>defer()</code> will automatically identify dependencies of <code>glue()</code> and include <code>etl()</code>, <code>model()</code> and <code>verify()</code> in the final package.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(defer)
 
 d &lt;-<span class="st"> </span><span class="kw">defer</span>(glue)
 <span class="co">#&gt; Found functions:</span>
-<span class="co">#&gt;   entry, etl, model, verify</span>
+<span class="co">#&gt;   etl, model, verify</span>
 <span class="co">#&gt; library calls:</span>
 <span class="co">#&gt;   base::sample.int, base::nrow, base::setdiff, base::seq,</span></code></pre></div>
 <p>Here is how we can “simulate” remote execution. First, we serialize the <strong>deferred</strong> function <code>d()</code>, clean the environment, deserialize <code>d()</code> and run it on a sample data. At this point all functions need to be a part of <code>d()</code> because they are no longer present in the R session (that is, the global environment).</p>
@@ -137,7 +141,7 @@ storage_path &lt;-<span class="st"> </span><span class="kw">tempfile</span>(<spa
 <span class="co"># deserialize and run</span>
 d &lt;-<span class="st"> </span><span class="kw">readRDS</span>(storage_path)
 <span class="kw">d</span>(iris, <span class="dv">50</span>)
-<span class="co">#&gt; [1] 0.98</span></code></pre></div>
+<span class="co">#&gt; [1] 1</span></code></pre></div>
 <p>Ta-da!</p>
 </div>
 <div id="source-code-for-the-longer-example" class="section level2">
