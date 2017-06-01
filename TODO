@@ -1,11 +1,10 @@
-* improve print.deferred
 * augment a package with an additional variable, function, etc. e.g. to remove
   an argument from the function
 * add another example in a vignette, where the data set is packaged together
   with the code
 * do not extract a variable if it is among formals()
 * a vignette with examples for opencpu and Rserver, and maybe other packages
-* README.md for github, with code coverage labels
+* add code examples to README.md for github
 * refresh docs
 * add functionality: dump deferred package to a R source file
 * create an introductory vignette
