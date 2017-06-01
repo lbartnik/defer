@@ -55,11 +55,14 @@ test_that("double colon", {
 
 
 test_that("load library deps", {
-  unloadNamespace("MASS")
-  expect_false(isNamespaceLoaded("MASS"))
+  expect_true(require(MASS))
 
   d <- defer_(function(x, y)area(sin, x, y), MASS::area)
   expect_is(d, "deferred")
+  
+  unloadNamespace("MASS")
+  expect_false(isNamespaceLoaded("MASS"))
+
   expect_equal(d(0, 1), 0.4596977)
 })
 

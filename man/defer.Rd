@@ -9,7 +9,7 @@
 defer(entry, ..., .dots, .extract = TRUE)
 
 defer_(entry, ..., .dots = list(), .extract = FALSE,
-  .caller_env = caller_env())
+  .caller_env = caller_env(), .verbosity = 0)
 
 is_deferred(x)
 }
@@ -28,6 +28,10 @@ assume the call was made and the wrapper is returned to. Its
 value is important when \code{.extract} is set to \code{TRUE},
 and it is used in the interactive version, \code{defer()}, which
 passes its own \code{caller_env()} to \code{defer_()}.}
+
+\item{.verbosity}{Accepts values 0, 1 and 2. 0 means quiet, 1 and 2
+result in additional output for the user. Set to \code{1} when
+in interactive mode, that is, when called from \code{defer()}.}
 
 \item{x}{Object to be tested.}
 }
