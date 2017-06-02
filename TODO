@@ -5,7 +5,9 @@
 * do not extract a variable if it is among formals()
 * a vignette with examples for opencpu and Rserver, and maybe other packages
 * add code examples to README.md for github
-* refresh docs
+* refresh docs, add examples
+* tests for packages where function names collide; do not record library
+  deps if they are specified with :: or :::
 * add functionality: dump deferred package to a R source file
 * create an introductory vignette
 * implement edge cases: %>%

@@ -1,8 +1,8 @@
 #' Defer function execution.
-#' 
+#'
 #' Both \code{defer} and \code{defer_} create an execution package
 #' (wrapper) for any user-provided function.
-#' 
+#'
 #' \code{defer} is intended for interactive use - it assumes that
 #' dependencies should be extracted (\code{.extract} defaults to
 #' \code{TRUE}).
@@ -12,7 +12,7 @@
 #' @param .dots A list of functions or quosures (see \code{\link[rlang]{quos}}).
 #' @param .extract Whether to analyze functions and extract dependencies
 #'        from their code.
-#' 
+#'
 #' @return A \code{deferred} function object.
 #'
 #' @export
@@ -36,8 +36,8 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 
 #' @description \code{defer_} is intended for non-interactive use. It
 #' provides an interface very similar to \code{defer} but by default
-#' turns off discovering dependencies (\code{.extract} is \code{FALSE}). 
-#' 
+#' turns off discovering dependencies (\code{.extract} is \code{FALSE}).
+#'
 #' @param .caller_env The environment where \code{defer_()} is supposed to
 #'        assume the call was made and the wrapper is returned to. Its
 #'        value is important when \code{.extract} is set to \code{TRUE},
@@ -47,11 +47,11 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #' @param .verbosity Accepts values 0, 1 and 2. 0 means quiet, 1 and 2
 #'        result in additional output for the user. Set to \code{1} when
 #'        in interactive mode, that is, when called from \code{defer()}.
-#' 
+#'
 #' @export
 #' @rdname defer
 #' @importFrom rlang caller_env
-#' 
+#'
 defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbosity = 0)
 {
   # TODO should library-function names be extracted even in the programmer's API?
@@ -60,7 +60,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   stopifnot(is.function(entry))
   stopifnot(is.list(.dots))
   stopifnot(.verbosity %in% 0:2)
-  
+
   # capture expressions with quos() and make sure all element are named
   dots  <- quos(...)
 
@@ -84,21 +84,22 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   processor$run(.extract, .verbosity)
 
   # --- prepare and return the deferred execution function object
-  
+
   executor <- executor
   exec_env <- environment(executor) <- new.env(parent = .caller_env)
-  
+
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps
   exec_env$variables     <- processor$variable_deps
-  
+  exec_env$arguments     <- list()
+
   formals(executor) <- formals(deps$entry)
   if (match("...", names(formals(executor)), 0) == 0) {
-    formals(executor) <- c(formals(executor), alist(...=))  
+    formals(executor) <- c(formals(executor), alist(...=))
   }
 
   class(executor) <- c("deferred", "function")
-  
+
   executor
 }
 
@@ -113,6 +114,55 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
 #' @rdname defer
 #'
 is_deferred <- function (x) inherits(x, 'deferred')
+
+
+
+#' @description Pass a value in place of an argument. This function will
+#' modify the input object.
+#'
+#' @param deferred A \code{deferred} function wrapper.
+#' @param ... Name-value pairs, where name is the name of an argument to
+#'        the \code{entry} function.
+#' @return Modified \code{deferred} function wrapper. Note that the
+#'         original function object is also modified.
+#'
+#' @export
+#' @rdname defer
+#'
+#' @examples
+#' d <- defer(function(a, b, c) return(a+b+c))
+#' augment(d, a = 1, b = 2, c = 3)
+#' d()
+#' #> 6
+#'
+augment <- function (deferred, ...)
+{
+  args <- list(...)
+  if (any(!nchar(names(args)))) {
+    stop("all arguments must be named", call. = FALSE)
+  }
+
+  i <- !(names(args) %in% names(formals(deferred)))
+  if (any(i)) {
+    stop("following names are not among arguments of `deferred`: ",
+         paste(names(args)[i], collapse = ", "), call. = FALSE)
+  }
+
+  cur <- environment(deferred)$arguments
+  i <- (names(args) %in% names(cur))
+  if (any(i)) {
+    warning("following arguments are already augmented and will be reset: ",
+            paste(names(args)[i]), call. = FALSE)
+  }
+
+  for (name in names(args)) {
+    cur[[name]] <- args[[name]]
+  }
+  environment(deferred)$arguments <- cur
+
+  return(deferred)
+}
+
 
 
 # ---------------------------------------------------------------------
@@ -131,10 +181,10 @@ make_all_named <- function (args)
   if (is.null(names(args)) || !length(names(args))) {
     names(args) <- rep("", length(args))
   }
-  
+
   empty <- !nchar(names(args))
   if (!any(empty)) return(args)
-  
+
   new_names <- vapply(args[empty], into_name, character(1))
 
   if (any(!nchar(new_names))) {
@@ -169,12 +219,12 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
                                stringsAsFactors = FALSE),
     function_deps = list(),
     variable_deps = list(),
-    
+
     initialize = function (deps, caller_env) {
       private$deps <- deps
       private$caller_env <- caller_env
     },
-    
+
     # 1. extract regular functions
     # 2. extract variables
     # 3. extract library functions
@@ -200,7 +250,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         name    <- names(private$deps)[1]
         current <- private$deps[[1]]
         private$deps <- private$deps[-1]
-        
+
         if (is_library_dependency(current)) {
           private$process_library(name, current)
         }
@@ -215,7 +265,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         }
       }
     },
-    
+
     process_library = function (name, fun) {
       pkg_name <- environmentName(environment(fun))
       pkg_ver  <- as.character(getNamespaceVersion(pkg_name))
@@ -224,7 +274,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       private$verbose("Adding library call: ", pkg_name, '::', name)
       self$library_deps <- rbind(self$library_deps, new_dep)
     },
-    
+
     # Extracts regular functions.
     # remove environment from a function unless it's a closure
     #
@@ -235,25 +285,25 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
 
       private$verbose("Adding function: ", name)
       self$function_deps[[name]] <- fun
-      
+
       if (isTRUE(private$extract)) {
         private$verbose("Processing function: ", name)
         private$process_body(body(fun))
       }
     },
-    
+
     process_variable = function (name, value) {
       private$verbose("Adding variable: ", name)
       self$variable_deps[[name]] <- value
     },
-    
+
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
     process_body = function (x) {
-      
+
       recurse <- function(x) sort(unique(as.character(unlist(lapply(x, private$process_body)))))
-      
+
       already_found <- function (x) (f_name %in% c(names(self$function_deps), self$library_deps$fun, names(self$deps)))
-      
+
       if (is.name(x)) {
         v_name <- as.character(x)
         if (nchar(v_name) && exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
@@ -266,7 +316,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         if (already_found(f_name)) {
           return(recurse(x[-1]))
         }
-        
+
         if (exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
           f_obj <- get(f_name, envir = private$caller_env)
           if (!is.primitive(f_obj)) {
@@ -274,19 +324,19 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
             private$verbose("  - adding candidate function: ", f_name)
           }
         }
-        
+
         return(recurse(x[-1]))
       }
-      
+
       if (is.recursive(x)) recurse(x)
     },
-    
+
     verbose = function (...) {
       if (identical(private$verbosity, 2)) {
         message(paste(..., collapse = " ", sep = ""))
       }
     },
-    
+
     summary = function () {
       if (identical(private$verbosity, 1) || identical(private$verbosity, 2)) {
         formatted <- format_deferred(self)

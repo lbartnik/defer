@@ -4,6 +4,7 @@
 \alias{defer}
 \alias{defer_}
 \alias{is_deferred}
+\alias{augment}
 \title{Defer function execution.}
 \usage{
 defer(entry, ..., .dots, .extract = TRUE)
@@ -12,6 +13,8 @@ defer_(entry, ..., .dots = list(), .extract = FALSE,
   .caller_env = caller_env(), .verbosity = 0)
 
 is_deferred(x)
+
+augment(deferred, ...)
 }
 \arguments{
 \item{entry}{Entry-point function.}
@@ -34,11 +37,19 @@ result in additional output for the user. Set to \code{1} when
 in interactive mode, that is, when called from \code{defer()}.}
 
 \item{x}{Object to be tested.}
+
+\item{deferred}{A \code{deferred} function wrapper.}
+
+\item{...}{Name-value pairs, where name is the name of an argument to
+the \code{entry} function.}
 }
 \value{
 A \code{deferred} function object.
 
 \code{TRUE} or \code{FALSE}.
+
+Modified \code{deferred} function wrapper. Note that the
+        original function object is also modified.
 }
 \description{
 Both \code{defer} and \code{defer_} create an execution package
@@ -50,9 +61,19 @@ turns off discovering dependencies (\code{.extract} is \code{FALSE}).
 
 \code{is_deferred} verifies if the given object
 is a \code{deferred} function wrapper.
+
+Pass a value in place of an argument. This function will
+modify the input object.
 }
 \details{
 \code{defer} is intended for interactive use - it assumes that
 dependencies should be extracted (\code{.extract} defaults to
 \code{TRUE}).
+}
+\examples{
+d <- defer(function(a, b, c) return(a+b+c))
+augment(d, a = 1, b = 2, c = 3)
+d()
+#> 6
+
 }

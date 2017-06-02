@@ -1,14 +1,14 @@
 
 #' Printer for deferred functions.
-#' 
+#'
 #' @description \code{print.defer} provides a specialized \code{print}
 #' method for deferred function wrappers.
-#' 
+#'
 #' @param x object to be printed out.
 #' @param ... further arguments passed to or from other methods.
-#' 
+#'
 #' @export
-#' 
+#'
 print.deferred <- function (x, ...)
 {
   stopifnot(is.function(x), is_deferred(x))
@@ -18,8 +18,8 @@ print.deferred <- function (x, ...)
 
   cat("Entry function:\n")
   cat(paste0("  ", format(ee$function_deps$entry), collapse = "\n"))
-  
-  formatted <- format_deferred(ee)
+
+  formatted <- format_deferred(ee, summary = FALSE)
   if (nchar(formatted) > 0) {
     cat("\n\nIncludes ")
     cat(formatted)
@@ -27,26 +27,30 @@ print.deferred <- function (x, ...)
 }
 
 
-format_deferred <- function (x, ...)
+format_deferred <- function (x, ..., summary = FALSE)
 {
+  format_entry <- function (condition, title, text) {
+    ifelse(!isTRUE(as.logical(condition)), "",
+           paste0(title, ":\n",
+                  paste(strwrap(text, prefix = "  "), collapse = "\n"),
+                 "\n"))
+  }
+
   function_names <- setdiff(names(x$function_deps), "entry")
 
   paste0(
-    ifelse(!length(function_names), "",
-           paste0("functions:\n",
-                  strwrap(paste(function_names, collapse = ", "),
-                          prefix = "  "),
-                  "\n")),
-    ifelse(!length(x$variables), "",
-           paste0("variables:\n",
-                  strwrap(paste(names(x$variables), collapse = ", "),
-                          prefix = "  "),
-                  "\n")),
-    ifelse(!nrow(x$library_deps), "",
-           paste0("library calls:\n",
-                  strwrap(paste0(x$library_deps$pkg, '::', x$library_deps$fun, collapse = ", "),
-                          prefix = "  "),
-                  "\n"))
+    format_entry(length(x$arguments) && !isTRUE(summary),
+                 "augmented arguments",
+                 paste(names(x$arguments), collapse = ", ")),
+    format_entry(length(function_names),
+                 "functions",
+                 paste(function_names, collapse = ", ")),
+    format_entry(length(x$variables),
+                 "variables",
+                 paste(names(x$variables), collapse = ", ")),
+    format_entry(nrow(x$library_deps),
+                 "library calls",
+                 paste0(x$library_deps$pkg, '::', x$library_deps$fun, collapse = ", "))
   )
 }
 

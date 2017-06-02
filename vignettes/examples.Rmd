@@ -15,10 +15,134 @@ library(knitr)
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
+## Deferred and Remote
+
+In the [Introduction](intro.html) vignette we explain the steps to create
+a simple __deferred function wrapper__. Here we will show how it can be
+combined with other packages to implement a simple RPC mechanism.
+
+
+## Preparing the Wrapper
+
+Unlike in the [Introduction](intro.html), to avoid clouding the message,
+this time we will work with a much simplified example. Here's the function
+we want to run in a remote R session:
+
+```{r original}
+fun <- function(x, y) x ^ y
+```
+
+Now we need to wrap it using `defer()`. Rrunning the wrapper is still
+straightforward.
+
+```{r}
+library(defer)
+
+deferred_fun <- defer(fun)
+deferred_fun(9, 2)
+```
+
+Because it is easier to run an argument-less function, our first step
+will be to __augment__ our deferred function wrapper with a value for
+both of its arguments.
+
+```{r}
+augment(deferred_fun, x = 7, y = 3)
+```
+
+Now we can call `deferred_fun()` completely ommitting arguments.
+See `?defer::augment` for more details.
+
+```{r}
+deferred_fun()
+```
+
+
+
+## OpenCPU
+
+Our first example will be [OpenCPU](www.opencpu.org). We will also need
+two other packages: [base64enc](https://cran.r-project.org/package=base64enc)
+to serialize the wrapper and [httr](https://cran.r-project.org/package=httr)
+to talk to OpenCPU's HTTP-based API.
+
+
+### Making the Call
+
+With `OpenCPU` we can run any R function available in any of the packages
+installed on the remote R server. `OpenCPU` also knows how to handle an
+uploaded file, thus we will call `base::source()` and send a very simple
+script, `local_script_path`, as its argument. We will be calling a public
+`OpenCPU` server __cloud.opencpu.org__.
+
+```{r}
+library(httr)
+library(base64enc)
+
+public_opencpu_url <- "https://cloud.opencpu.org/ocpu/library/base/R/source/print"
+local_script_path <- tempfile(fileext = ".R")
+```
+
+
+Here is what a `httr` call to `opencpu` looks like:
+
+```{r opencpu_call,eval=FALSE}
+http_result <- httr::POST(public_opencpu_url,
+                          body = list(file = upload_file(local_script_path)))
+```
+
+
+### The Script
+
+The script contains `deferred_fun` serilized into a base64-encoded string.
+It instructs the remote R session to load the `base64enc` package, deserialize
+our wrapper, and then run it in that remote R session.
+
+```{r to_base64, echo=FALSE}
+to_base64 <- function (object)
+{
+  rds_buffer <- rawConnection(raw(0), 'w')
+  on.exit(close(rds_buffer))
+  saveRDS(object, rds_buffer)
+  base64enc::base64encode(rawConnectionValue(rds_buffer))
+}
+```
+
+```{r opencpu_script}
+cat(paste0("base64 <- '", to_base64(deferred_fun), "'\n",
+           "library(base64enc)\n",
+           "bytes <- rawConnection(base64enc::base64decode(base64), 'r')\n",
+           "deserialized <- readRDS(bytes)\n",
+           "deserialized()\n"),
+    file = local_script_path)
+```
+
+Here is the `to_base64()` function which uses `base64enc`'s API to
+serialize its argument.
+
+```{r to_base64}
+```
+
+
+### Running the OpenCPU Example
+
+Now that everything is set, we can run the HTTP call and collect
+the result.
+
+```{r}
+http_result <- httr::POST(public_opencpu_url,
+                          body = list(file = upload_file(local_script_path)))
+content(http_result, 'text')
+```
+
+`source()` returns a `list` with two elements: `value` is the value of
+the last statement in the file - which is 7 to the power of 3, as
+expected; `visible` is an attribute that tells us if `value` was intended
+to be printed out.
+
+
 
 ## foreach
-
-## opencpu
 
 ## Rserve
 
