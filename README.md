@@ -9,10 +9,15 @@ defer
 Overview
 --------
 
-`defer` wraps functions together with their dependencies so that they
-can be sent to another R session and run there with no additional code
-overhead. The wrapper itself is a function with the same signature
-(that is, R's `formals()`).
+`defer` wraps a function together with its dependencies. The result is
+a self-contained function that can be:
+
+-   stored for documentation purposes
+-   sent over to a different (possibly remote) R session and run there
+    without elaborate dependency restoring
+
+The wrapper itself is a function with the same signature (that is,
+`formals()`).
 
 -   `defer()` wraps a function and discovers its dependencies
 -   `augment()` defines default values for arguments
@@ -80,7 +85,10 @@ It's enough to:
 -   put the string in a R snippet that restores the original R function object
 -   run the function
 
-(See the _Examples_ vignette for more details.)
+(See the [Examples](inst/doc/examples.html) vignette for more details.)
+
+The best thing is that `opencpu` does not have to provide the `defer` package
+because the wrapper is self-contained!
 
 
 ``` r
