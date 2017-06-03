@@ -90,7 +90,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
 
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps
-  exec_env$variables     <- processor$variable_deps
+  exec_env$variables     <- processor$variables
   exec_env$arguments     <- list()
 
   formals(executor) <- formals(deps$entry)
@@ -218,7 +218,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     library_deps  = data.frame(pkg = character(), fun = character(), ver = character(),
                                stringsAsFactors = FALSE),
     function_deps = list(),
-    variable_deps = list(),
+    variables = list(),
 
     initialize = function (deps, caller_env) {
       private$deps <- deps
@@ -294,7 +294,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
 
     process_variable = function (name, value) {
       private$verbose("Adding variable: ", name)
-      self$variable_deps[[name]] <- value
+      self$variables[[name]] <- value
     },
 
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
@@ -307,7 +307,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       if (is.name(x)) {
         v_name <- as.character(x)
         if (nchar(v_name) && exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
-          self$variable_deps[[v_name]] <- get(v_name, envir = private$caller_env)
+          self$variables[[v_name]] <- get(v_name, envir = private$caller_env)
           private$verbose("  - adding candidate variable: ", v_name)
         }
       }
