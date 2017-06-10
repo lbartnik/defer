@@ -93,20 +93,15 @@ because the wrapper is self-contained!
 
 ``` r
 library(httr)
-library(base64enc)
 
 public_opencpu_url <- "https://cloud.opencpu.org/ocpu/library/base/R/source/print"
+
+# we're still using the same wrapper object as above
+serialized_wrapper <- jsonlite::base64_enc(serialize(wrapper, NULL))
+
 local_script_path <- tempfile(fileext = ".R")
-
-buffer <- rawConnection(raw(0), 'w')
-saveRDS(wrapper, buffer)
-wrapper_base64 <- base64enc::base64encode(rawConnectionValue(buffer))
-
-cat(paste0("base64 <- '", wrapper_base64, "'\n",
-           "library(base64enc)\n",
-           "bytes <- rawConnection(base64enc::base64decode(base64), 'r')\n",
-           "deserialized <- readRDS(bytes)\n",
-           "deserialized(10)\n"),
+cat(paste0("wrapper <- unserialize(jsonlite::base64_dec('", serialized_wrapper, "'))\n",
+           "wrapper(10)\n"),
     file = local_script_path)
 
 http_result <- httr::POST(public_opencpu_url,

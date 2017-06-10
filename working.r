@@ -1,39 +1,54 @@
-library(base64enc)
+library(dplyr)
+library(RSclient)
 
-serialize_object <- function (object) {
-  rds_buffer <- rawConnection(raw(0), 'w')
-  on.exit(close(rds_buffer))
-  saveRDS(object, rds_buffer)
-  base64encode(rawConnectionValue(rds_buffer))
-}
+iris %>%
+   group_by(Species) %>%
+   parallelize %>%
+   do({
+     # something that's better run in paralle
+     data.frame(result = 1)
+   })
 
-x <- serialize_object(d)
-nchar(x)
+system.time({
+  data.frame(g = sample.int(1e1, 1e7, replace = TRUE),
+             r = sample(2, 1e7, replace = TRUE) - 1,
+             x = rnorm(1e7), y = rnorm(1e7)) %>%
+  group_by(g) %>%
+  do({
+    m <- glm(r~x+y, family = binomial, ., control = list(maxit = 100))
+    data.frame(err = sqrt(mean(residuals(m)^2)))
+  })
+})
 
-temp_path <- tempfile(fileext = ".R")
-temp_file <- file(temp_path, open = "w")
-contents  <- paste0("x <- '", x, "'\n",
-                    "library(base64enc)\n",
-                    "b <- rawConnection(base64decode(x), 'r')\n",
-                    "d <- readRDS(b)\n",
-                    "d(b = 2)\n")
-writeChar(contents, nchars = nchar(contents), temp_file, eos = NULL)
-close(temp_file)
-
+system.time({
+  data.frame(g = sample.int(1e1, 1e7, replace = TRUE),
+             r = sample(2, 1e7, replace = TRUE) - 1,
+             x = rnorm(1e7), y = rnorm(1e7)) %>%
+    group_by(g) %>%
+    parallelize %>%
+    do({
+      m <- glm(r~x+y, family = binomial, ., control = list(maxit = 100))
+      data.frame(err = sqrt(mean(residuals(m)^2)))
+    })
+})
 
 library(httr)
+library(defer)
+wrapper <- defer(function(x)x*x)
 
-host <- "http://localhost:5656/ocpu"
-where <- paste0(host, "/library/base/R/source/json")
+public_opencpu_url <- "https://cloud.opencpu.org/ocpu/library/base/R/source/print"
 
-result <- POST(where, body = list(file = httr::upload_file(temp_path)))
-content(result, 'text')
+# we're still using the same wrapper object as above
+serialized_wrapper <- jsonlite::base64_enc(serialize(wrapper, NULL))
 
+local_script_path <- tempfile(fileext = ".R")
+cat(paste0("wrapper <- unserialize(jsonlite::base64_dec('", serialized_wrapper, "'))\n",
+           "wrapper(10)\n"),
+    file = local_script_path)
 
-body  <- list(file = paste0('"', basename(temp_path), '"'))
-result <- POST(where, body = body)
-content(result, 'text')
-
-
+http_result <- httr::POST(public_opencpu_url,
+                          body = list(file = upload_file(local_script_path)))
+content(http_result, 'text')
+#> [1] "$value\n[1] 29688.67\n\n$visible\n[1] TRUE\n\n"
 
 

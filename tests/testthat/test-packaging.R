@@ -196,12 +196,13 @@ test_that("augmented arguments", {
   expect_is(d, "deferred")
   expect_equal(d(1, 2), 3)
 
-  augment(d, a = 1)
+  d <- augment(d, a = 1)
   expect_equal(d(b = 2), 3)
 
   expect_warning(augment(d, a = 3),
                  "following arguments are already augmented and will be reset: a")
-  expect_equal(d(b = 2), 5)
+  # augment doesn't change its argument!
+  expect_equal(d(b = 2), 3)
 
   expect_error(d(), "missing arguments: b")
   expect_error(d(a = 1), "following arguments are already augmented: a")

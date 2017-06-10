@@ -12,7 +12,7 @@
 
 <meta name="author" content="Lukasz A. Bartnik" />
 
-<meta name="date" content="2017-06-01" />
+<meta name="date" content="2017-06-09" />
 
 <title>Examples for Third-Party Packages</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Examples for Third-Party Packages</h1>
 <h4 class="author"><em>Lukasz A. Bartnik</em></h4>
-<h4 class="date"><em>2017-06-01</em></h4>
+<h4 class="date"><em>2017-06-09</em></h4>
 
 
 
@@ -89,56 +89,46 @@ deferred_fun &lt;-<span class="st"> </span><span class="kw">defer</span>(fun)
 <span class="kw">deferred_fun</span>(<span class="dv">9</span>, <span class="dv">2</span>)
 <span class="co">#&gt; [1] 81</span></code></pre></div>
 <p>Because it is easier to run an argument-less function, our first step will be to <strong>augment</strong> our deferred function wrapper with a value for both of its arguments.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">augment</span>(deferred_fun, <span class="dt">x =</span> <span class="dv">7</span>, <span class="dt">y =</span> <span class="dv">3</span>)
-<span class="co">#&gt; Deferred-execution package</span>
-<span class="co">#&gt; </span>
-<span class="co">#&gt; Entry function:</span>
-<span class="co">#&gt;   function (x, y) </span>
-<span class="co">#&gt;   x^y</span></code></pre></div>
-<p>Now we can call <code>deferred_fun()</code> completely ommitting arguments. See <code>?defer::augment</code> for more details.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">deferred_fun &lt;-<span class="st"> </span><span class="kw">augment</span>(deferred_fun, <span class="dt">x =</span> <span class="dv">7</span>, <span class="dt">y =</span> <span class="dv">3</span>)</code></pre></div>
+<p>Now we can call <code>deferred_fun()</code> completely ommitting arguments (see <code>?defer::augment</code> for more details).</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">deferred_fun</span>()
 <span class="co">#&gt; [1] 343</span></code></pre></div>
 </div>
 <div id="opencpu" class="section level2">
 <h2>OpenCPU</h2>
-<p>Our first example will be <a href="www.opencpu.org">OpenCPU</a>. We will also need two other packages: <a href="https://cran.r-project.org/package=base64enc">base64enc</a> to serialize the wrapper and <a href="https://cran.r-project.org/package=httr">httr</a> to talk to OpenCPU’s HTTP-based API.</p>
+<p>Our first example will be <a href="www.opencpu.org">OpenCPU</a>. We will also need two other packages: <a href="https://cran.r-project.org/package=jsonlite">jsonlite</a> to serialize the wrapper and <a href="https://cran.r-project.org/package=httr">httr</a> to talk to OpenCPU’s HTTP-based API. <code>jsonlite</code> is a prerequisite of <code>opencpu</code> so we can be sure it will be available.</p>
 <div id="making-the-call" class="section level3">
 <h3>Making the Call</h3>
-<p>With <code>OpenCPU</code> we can run any R function available in any of the packages installed on the remote R server. <code>OpenCPU</code> also knows how to handle an uploaded file, thus we will call <code>base::source()</code> and send a very simple script, <code>local_script_path</code>, as its argument. We will be calling a public <code>OpenCPU</code> server <strong>cloud.opencpu.org</strong>.</p>
+<p>With <code>OpenCPU</code> we can run any R function available in any of the packages installed on the remote R server. <code>OpenCPU</code> also knows how to handle an uploaded file, thus we will call <code>base::source()</code> and send a very simple script, <code>local_script_path</code>, as its argument. We will call a public <code>OpenCPU</code> server, <strong>cloud.opencpu.org</strong>.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(httr)
-<span class="kw">library</span>(base64enc)
+<span class="kw">library</span>(jsonlite)
 
-public_opencpu_url &lt;-<span class="st"> &quot;https://cloud.opencpu.org/ocpu/library/base/R/source/print&quot;</span>
+public_opencpu_url &lt;-<span class="st"> &quot;https://cloud.opencpu.org/ocpu/library/base/R/source/json&quot;</span>
 local_script_path &lt;-<span class="st"> </span><span class="kw">tempfile</span>(<span class="dt">fileext =</span> <span class="st">&quot;.R&quot;</span>)</code></pre></div>
-<p>Here is what a <code>httr</code> call to <code>opencpu</code> looks like:</p>
+<p>Here is how we invoke the remote <code>OpenCPU</code> server throgh <code>httr</code>:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">http_result &lt;-<span class="st"> </span>httr::<span class="kw">POST</span>(public_opencpu_url,
                           <span class="dt">body =</span> <span class="kw">list</span>(<span class="dt">file =</span> <span class="kw">upload_file</span>(local_script_path)))</code></pre></div>
 </div>
 <div id="the-script" class="section level3">
 <h3>The Script</h3>
-<p>The script contains <code>deferred_fun</code> serilized into a base64-encoded string. It instructs the remote R session to load the <code>base64enc</code> package, deserialize our wrapper, and then run it in that remote R session.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">cat</span>(<span class="kw">paste0</span>(<span class="st">&quot;base64 &lt;- '&quot;</span>, <span class="kw">to_base64</span>(deferred_fun), <span class="st">&quot;'</span><span class="ch">\n</span><span class="st">&quot;</span>,
-           <span class="st">&quot;library(base64enc)</span><span class="ch">\n</span><span class="st">&quot;</span>,
-           <span class="st">&quot;bytes &lt;- rawConnection(base64enc::base64decode(base64), 'r')</span><span class="ch">\n</span><span class="st">&quot;</span>,
-           <span class="st">&quot;deserialized &lt;- readRDS(bytes)</span><span class="ch">\n</span><span class="st">&quot;</span>,
-           <span class="st">&quot;deserialized()</span><span class="ch">\n</span><span class="st">&quot;</span>),
+<p>The script contains <code>deferred_fun</code> serialized into a base64-encoded string. It instructs the remote R session to decode the string, unserialize the wrapper and then run it in that remote R session.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">serialized_wrapper &lt;-<span class="st"> </span>jsonlite::<span class="kw">base64_enc</span>(<span class="kw">serialize</span>(deferred_fun, <span class="ot">NULL</span>))
+<span class="kw">cat</span>(<span class="kw">paste0</span>(<span class="st">&quot;wrapper &lt;- unserialize(jsonlite::base64_dec('&quot;</span>, serialized_wrapper, <span class="st">&quot;'))</span><span class="ch">\n</span><span class="st">&quot;</span>,
+           <span class="st">&quot;wrapper()</span><span class="ch">\n</span><span class="st">&quot;</span>),
     <span class="dt">file =</span> local_script_path)</code></pre></div>
-<p>Here is the <code>to_base64()</code> function which uses <code>base64enc</code>’s API to serialize its argument.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">to_base64 &lt;-<span class="st"> </span>function (object)
-{
-  rds_buffer &lt;-<span class="st"> </span><span class="kw">rawConnection</span>(<span class="kw">raw</span>(<span class="dv">0</span>), <span class="st">'w'</span>)
-  <span class="kw">on.exit</span>(<span class="kw">close</span>(rds_buffer))
-  <span class="kw">saveRDS</span>(object, rds_buffer)
-  base64enc::<span class="kw">base64encode</span>(<span class="kw">rawConnectionValue</span>(rds_buffer))
-}</code></pre></div>
 </div>
 <div id="running-the-opencpu-example" class="section level3">
 <h3>Running the OpenCPU Example</h3>
 <p>Now that everything is set, we can run the HTTP call and collect the result.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">http_result &lt;-<span class="st"> </span>httr::<span class="kw">POST</span>(public_opencpu_url,
                           <span class="dt">body =</span> <span class="kw">list</span>(<span class="dt">file =</span> <span class="kw">upload_file</span>(local_script_path)))
-<span class="kw">content</span>(http_result, <span class="st">'text'</span>)
-<span class="co">#&gt; [1] &quot;$value\n[1] 343\n\n$visible\n[1] TRUE\n\n&quot;</span></code></pre></div>
+<span class="kw">fromJSON</span>(<span class="kw">content</span>(http_result, <span class="st">'text'</span>))
+<span class="co">#&gt; No encoding supplied: defaulting to UTF-8.</span>
+<span class="co">#&gt; $value</span>
+<span class="co">#&gt; [1] 343</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; $visible</span>
+<span class="co">#&gt; [1] TRUE</span></code></pre></div>
 <p><code>source()</code> returns a <code>list</code> with two elements: <code>value</code> is the value of the last statement in the file - which is 7 to the power of 3, as expected; <code>visible</code> is an attribute that tells us if <code>value</code> was intended to be printed out.</p>
 </div>
 </div>

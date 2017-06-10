@@ -86,7 +86,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   # --- prepare and return the deferred execution function object
 
   executor <- executor
-  exec_env <- environment(executor) <- new.env(parent = .caller_env)
+  exec_env <- environment(executor) <- new.env(parent = globalenv())
 
   exec_env$function_deps <- processor$function_deps
   exec_env$library_deps  <- processor$library_deps
@@ -128,6 +128,7 @@ is_deferred <- function (x) inherits(x, 'deferred')
 #'
 #' @export
 #' @rdname defer
+#' @importFrom rlang env_clone
 #'
 #' @examples
 #' d <- defer(function(a, b, c) return(a+b+c))
@@ -152,15 +153,19 @@ augment <- function (deferred, ...)
   i <- (names(args) %in% names(cur))
   if (any(i)) {
     warning("following arguments are already augmented and will be reset: ",
-            paste(names(args)[i]), call. = FALSE)
+            paste(names(args)[i], collapse = ", "), call. = FALSE)
   }
 
   for (name in names(args)) {
     cur[[name]] <- args[[name]]
   }
-  environment(deferred)$arguments <- cur
 
-  return(deferred)
+  # create a copy of deferred and assign arguments
+  new_deferred <- deferred
+  environment(new_deferred) <- env_clone(environment(deferred))
+  environment(new_deferred)$arguments <- cur
+
+  return(new_deferred)
 }
 
 

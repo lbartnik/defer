@@ -16,13 +16,16 @@ Suggests:
   rmarkdown (>= 1.0),
   dplyr,
   lubridate,
-  magrittr
+  magrittr,
+  base64enc,
+  httr
 Imports:
     rlang,
     R6
 Collate:
+    'client.R'
     'execution.R'
-    'packaging.R'
     'extra.R'
+    'packaging.R'
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
