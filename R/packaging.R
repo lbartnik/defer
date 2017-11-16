@@ -18,7 +18,7 @@
 #' @export
 #' @rdname defer
 #'
-#' @importFrom rlang quos eval_tidy caller_env
+#' @import rlang
 #'
 defer <- function (entry, ..., .dots, .extract = TRUE)
 {
@@ -50,7 +50,7 @@ defer <- function (entry, ..., .dots, .extract = TRUE)
 #'
 #' @export
 #' @rdname defer
-#' @importFrom rlang caller_env
+#' @import rlang
 #'
 defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = caller_env(), .verbosity = 0)
 {
@@ -64,9 +64,9 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   # capture expressions with quos() and make sure all element are named
   dots  <- quos(...)
 
-  dots  <- tryCatch(eval_tidy(make_all_named(dots)), error = function(e) stop(
+  dots  <- tryCatch(lapply(make_all_named(dots), eval_tidy), error = function(e) stop(
     "some arguments passed in ... are not named and names cannot be auto-generated", call. = FALSE))
-  .dots <- tryCatch(eval_tidy(make_all_named(.dots)), error = function(e) stop(
+  .dots <- tryCatch(lapply(make_all_named(.dots), eval_tidy), error = function(e) stop(
     "some elements in `.dots` are not named and names cannot be auto-generated", call. = FALSE))
 
   # no overlaps are allowed
@@ -102,6 +102,12 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
 
   executor
 }
+
+
+#' @rdname defer
+#' @export
+#' @import rlang
+caller_env <- caller_env
 
 
 #' @description \code{is_deferred} verifies if the given object
@@ -213,6 +219,8 @@ is_closure <- function (x, caller_env)
     !identical(environment(x), globalenv())
 }
 
+is_assignment <- function (x) identical(x[[1]], bquote(`<-`))
+
 
 library(R6)
 
@@ -304,17 +312,22 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
 
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
     process_body = function (x) {
-
       recurse <- function(x) sort(unique(as.character(unlist(lapply(x, private$process_body)))))
 
       already_found <- function (x) (f_name %in% c(names(self$function_deps), self$library_deps$fun, names(self$deps)))
 
       if (is.name(x)) {
         v_name <- as.character(x)
-        if (nchar(v_name) && exists(v_name, envir = private$caller_env, mode = "numeric", inherits = TRUE)) {
-          self$variables[[v_name]] <- get(v_name, envir = private$caller_env)
-          private$verbose("  - adding candidate variable: ", v_name)
-        }
+        if (!nchar(v_name) || !exists(v_name, envir = private$caller_env, inherits = TRUE)) return()
+
+        candidate <- get(v_name, envir = private$caller_env)
+        if (!is.numeric(candidate) && !is.character(candidate)) return()
+
+        self$variables[[v_name]] <- get(v_name, envir = private$caller_env)
+        private$verbose("  - adding candidate variable: ", v_name)
+      }
+      else if (is_assignment(x)) {
+        return(recurse(x[-(1:2)]))
       }
       else if (is.call(x)) {
         f_name <- as.character(x[[1]])

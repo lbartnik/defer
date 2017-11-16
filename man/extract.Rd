@@ -3,6 +3,7 @@
 \name{extract_functions}
 \alias{extract_functions}
 \alias{extract_dependencies}
+\alias{extract_variables}
 \title{\code{list_dependencies} returns a \code{character} vector of
 function names that come from other R packages. Each function
 name (vector value) has a corresponding package name set in
@@ -11,6 +12,8 @@ name (vector value) has a corresponding package name set in
 extract_functions(df)
 
 extract_dependencies(df)
+
+extract_variables(df)
 }
 \arguments{
 \item{df}{deferred function object.}
@@ -20,6 +23,8 @@ A vector of function names.
 
 \code{list_dependencies} returns a named vector of
 functions that belong to other R packages.
+
+`list_dependencies` returns a named list.
 }
 \description{
 \code{list_functions} returns a \code{character} vector
@@ -29,4 +34,8 @@ of names of functions packaged in \code{pkg}.
 function names that come from other R packages. Each function
 name (vector value) has a corresponding package name set in
 \code{\link{names}}.
+
+`list_dependencies` returns a `list` of variables referenced in any
+of the packaged functions, that could be found in the caller
+environment at the time of packaging.
 }

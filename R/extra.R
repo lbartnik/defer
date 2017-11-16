@@ -92,3 +92,20 @@ extract_dependencies <- function (df)
   return(ee$library_deps)
 }
 
+
+
+#' `list_dependencies` returns a `list` of variables referenced in any
+#' of the packaged functions, that could be found in the caller
+#' environment at the time of packaging.
+#'
+#' @return `list_dependencies` returns a named list.
+#'
+#' @export
+#' @rdname extract
+#'
+extract_variables <- function (df)
+{
+  stopifnot(is_deferred(df))
+  ee <- environment(df)
+  return(ee$variables)
+}

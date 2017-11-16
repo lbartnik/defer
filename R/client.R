@@ -181,12 +181,15 @@ do_.parallel <- function (.data, ..., env = parent.frame(), .dots)
 
 
 library(R6)
+
+#' @import R6
+#' @import RSclient
 RServeManager <- R6::R6Class("RServeManager",
   public = list(
 
     initialize = function (n = 1, .debug = FALSE) {
       private$pool <- lapply(seq(n), function(i) {
-        list(state = "idle", connection = RS.connect(), task = list())
+        list(state = "idle", connection = RSclient::RS.connect(), task = list())
       })
 
       private$debugging <- isTRUE(.debug)
@@ -236,8 +239,8 @@ RServeManager <- R6::R6Class("RServeManager",
         private$debug("sending task")
         rs <- private$pool[[i]]
 
-        RS.assign(rs$connection, "fun", rs$task$fun, wait = FALSE)
-        RS.eval(rs$connection, fun(), wait = FALSE)
+        RSclient::RS.assign(rs$connection, "fun", rs$task$fun, wait = FALSE)
+        RSclient::RS.eval(rs$connection, fun(), wait = FALSE)
       }
       length(lapply(private$which_idle(), fill_idle)) > 0
     },
@@ -245,7 +248,7 @@ RServeManager <- R6::R6Class("RServeManager",
     collect = function () {
       private$debug("collect")
       ans <- lapply(private$pool, function (rs) {
-        RS.collect(rs$connection, timeout = 0, detail = TRUE)
+        RSclient::RS.collect(rs$connection, timeout = 0, detail = TRUE)
       })
       inull <- vapply(ans, function (x) is.null(x$value), logical(1))
 

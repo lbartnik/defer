@@ -3,6 +3,7 @@
 \name{defer}
 \alias{defer}
 \alias{defer_}
+\alias{caller_env}
 \alias{is_deferred}
 \alias{augment}
 \title{Defer function execution.}
@@ -11,6 +12,8 @@ defer(entry, ..., .dots, .extract = TRUE)
 
 defer_(entry, ..., .dots = list(), .extract = FALSE,
   .caller_env = caller_env(), .verbosity = 0)
+
+caller_env(n = 1)
 
 is_deferred(x)
 
