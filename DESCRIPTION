@@ -20,12 +20,14 @@ Suggests:
   base64enc,
   httr
 Imports:
-    rlang,
-    R6
+  rlang,
+  R6,
+  Rserve,
+  RSclient
 Collate:
-    'client.R'
-    'execution.R'
-    'extra.R'
-    'packaging.R'
+  'client.R'
+  'execution.R'
+  'extra.R'
+  'packaging.R'
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
