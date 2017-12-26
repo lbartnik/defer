@@ -2,14 +2,14 @@ context("client")
 
 
 test_that("rserve manager", {
-  skip_if_not(require(RSclient))
-  skip_if_not(require(Rserve))
+  skip_if_not_installed('RSclient')
+  skip_if_not_installed('Rserve')
 
-  Rserve(wait = FALSE, args = "--no-save --RS-enable-control --slave")
+  Rserve::Rserve(wait = FALSE, args = "--no-save --RS-enable-control --slave")
   Sys.sleep(0.2)
 
-  rsc <- RS.connect()
-  on.exit(RS.server.shutdown(rsc))
+  rsc <- RSclient::RS.connect()
+  on.exit(RSclient::RS.server.shutdown(rsc))
 
   manager <- defer:::RServeManager$new(4)
   results <- list()

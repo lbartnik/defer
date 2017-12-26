@@ -10,20 +10,20 @@ License: MIT + file LICENSE
 Depends:
   R (>= 3.2.0)
 Suggests:
-  mockery,
-  testthat,
-  knitr,
-  rmarkdown (>= 1.0),
+  base64enc,
   dplyr,
+  httr,
+  knitr,
   lubridate,
   magrittr,
-  base64enc,
-  httr
-Imports:
-  rlang,
-  R6,
+  mockery,
+  rmarkdown (>= 1.0),
+  testthat,
   Rserve,
   RSclient
+Imports:
+  rlang,
+  R6
 Collate:
   'client.R'
   'execution.R'

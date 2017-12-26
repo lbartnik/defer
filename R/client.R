@@ -183,11 +183,12 @@ do_.parallel <- function (.data, ..., env = parent.frame(), .dots)
 library(R6)
 
 #' @import R6
-#' @import RSclient
 RServeManager <- R6::R6Class("RServeManager",
   public = list(
 
     initialize = function (n = 1, .debug = FALSE) {
+      requireNamespace('RSclient', quitely = TRUE)
+
       private$pool <- lapply(seq(n), function(i) {
         list(state = "idle", connection = RSclient::RS.connect(), task = list())
       })
