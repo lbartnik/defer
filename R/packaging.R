@@ -178,12 +178,12 @@ augment <- function (deferred, ...)
 
 # ---------------------------------------------------------------------
 
-#' @importFrom rlang UQE
+#' @importFrom rlang get_expr
 make_all_named <- function (args)
 {
   is_double_colon <- function (x) is.call(x) && identical(x[[1]], bquote(`::`))
   into_name       <- function (x) {
-    e <- UQE(x)
+    e <- get_expr(x)
     if (is.name(e)) return(as.character(e))
     if (is_double_colon(e)) return(deparse(e[[3]]))
     ""
@@ -208,16 +208,25 @@ make_all_named <- function (args)
 }
 
 
-is_library_dependency <- function (x)
-{
-  is.function(x) && isNamespace(environment(x))
+is_library_dependency <- function (x) {
+  (is.function(x) && isNamespace(environment(x))) || is_magrittr_impl(x)
 }
 
-is_closure <- function (x, caller_env)
-{
+is_closure <- function (x, caller_env) {
   !identical(environment(x), caller_env) &&
     !identical(environment(x), globalenv())
 }
+
+# symbol
+is_magrittr_pipe <- function (x) magrittr:::is_pipe(x)
+# operator function object
+is_magrittr_impl <- function (x) identical(x, magrittr::`%>%`)|| identical(x, magrittr::`%<>%`)
+# runtime
+is_magrittr_fseq <- function (x) inherits(x, 'fseq')
+
+is_double_colon <- function (x) is.call(x) && identical(x[[1]], bquote(`::`))
+is_triple_colon <- function (x) is.call(x) && identical(x[[1]], bquote(`:::`))
+is_colon <- function (x) is_double_colon(x) || is_triple_colon(x)
 
 is_assignment <- function (x) identical(x[[1]], bquote(`<-`))
 
@@ -280,7 +289,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
 
     process_library = function (name, fun) {
-      pkg_name <- environmentName(environment(fun))
+      pkg_name <- if (is_magrittr_impl(fun)) 'magrittr' else environmentName(environment(fun))
       pkg_ver  <- as.character(getNamespaceVersion(pkg_name))
       new_dep  <- data.frame(fun = name, pkg = pkg_name, ver = pkg_ver, stringsAsFactors = FALSE)
 
@@ -292,7 +301,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     # remove environment from a function unless it's a closure
     #
     process_function = function (name, fun) {
-      if (!is_closure(fun, private$caller_env)) {
+      if (!is_closure(fun, private$caller_env) && !is_magrittr_fseq(fun)) {
         environment(fun) <- emptyenv()
       }
 
@@ -301,7 +310,17 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
 
       if (isTRUE(private$extract)) {
         private$verbose("Processing function: ", name)
-        private$process_body(body(fun))
+
+        if (is_magrittr_fseq(fun)) {
+          private$verbose("Processing fseq: fun")
+          private$verbose("  - adding candidate function: %>%")
+          private$deps[["%>%"]] <- magrittr::`%>%`
+          lapply(magrittr::functions(fun), function (f) {
+            private$process_body(body(f))
+          })
+        }
+        else
+          private$process_body(body(fun))
       }
     },
 
@@ -311,11 +330,17 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
 
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
-    process_body = function (x) {
-      recurse <- function(x) sort(unique(as.character(unlist(lapply(x, private$process_body)))))
-
+    process_body = function (x, in_pipe = FALSE) {
+      recurse       <- function (x, in_pipe = FALSE) sort(unique(as.character(unlist(lapply(x, private$process_body, in_pipe)))))
       already_found <- function (x) (f_name %in% c(names(self$function_deps), self$library_deps$fun, names(self$deps)))
 
+      # if a name but in the context of a pipe expression, treat it like a function call,
+      # which it is
+      if (is.name(x) && isTRUE(in_pipe)) {
+        x <- substitute(fun(.), list(fun = x))
+      }
+
+      # it will be either a name, an assignment, a call or something recursive
       if (is.name(x)) {
         v_name <- as.character(x)
         if (!nchar(v_name) || !exists(v_name, envir = private$caller_env, inherits = TRUE)) return()
@@ -329,24 +354,29 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
       else if (is_assignment(x)) {
         return(recurse(x[-(1:2)]))
       }
-      else if (is.call(x)) {
-        f_name <- as.character(x[[1]])
-        if (already_found(f_name)) {
-          return(recurse(x[-1]))
-        }
-
-        if (exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
-          f_obj <- get(f_name, envir = private$caller_env)
-          if (!is.primitive(f_obj)) {
-            private$deps[[f_name]] <- f_obj
-            private$verbose("  - adding candidate function: ", f_name)
-          }
-        }
-
-        return(recurse(x[-1]))
+      else if (is_colon(x)) {
+        f_name <- deparse(x[[3]])
+        f_obj <- eval(x, envir = private$caller_env)
+        private$process_candidate(f_name, f_obj)
       }
+      else if (is.call(x) && is.name(x[[1]])) {
+        f_name <- deparse(x[[1]])
+        if (!already_found(f_name) && exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
+          f_obj <- get(f_name, envir = private$caller_env)
+          private$process_candidate(f_name, f_obj)
+        }
 
-      if (is.recursive(x)) recurse(x)
+        recurse(x[-1], is_magrittr_pipe(x[[1]]))
+      }
+      else if (is.recursive(x))
+        recurse(x)
+    },
+
+    process_candidate = function (name, fun) {
+      if (!is.primitive(fun)) {
+        private$deps[[name]] <- fun
+        private$verbose("  - adding candidate function: ", name)
+      }
     },
 
     verbose = function (...) {
