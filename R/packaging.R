@@ -346,7 +346,9 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         if (!nchar(v_name) || !exists(v_name, envir = private$caller_env, inherits = TRUE)) return()
 
         candidate <- get(v_name, envir = private$caller_env)
-        if (!is.numeric(candidate) && !is.character(candidate)) return()
+        # TODO replace condition if only simple variables are to be extracted
+        #if (!is.numeric(candidate) && !is.character(candidate)) return()
+        if (is.function(candidate)) return()
 
         self$variables[[v_name]] <- get(v_name, envir = private$caller_env)
         private$verbose("  - adding candidate variable: ", v_name)
@@ -366,7 +368,13 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
           private$process_candidate(f_name, f_obj)
         }
 
-        recurse(x[-1], is_magrittr_pipe(x[[1]]))
+        if (is_magrittr_pipe(x[[1]])) {
+          recurse(x[2], FALSE)
+          recurse(x[-(1:2)], TRUE)
+        }
+        else {
+          recurse(x[-1], FALSE)
+        }
       }
       else if (is.recursive(x))
         recurse(x)

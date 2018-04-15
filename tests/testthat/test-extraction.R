@@ -130,14 +130,17 @@ test_that("complex pipe", {
 
 test_that("compound pipe", {
   skip_if_not_installed("magrittr")
-  requireNamespace("magrittr", quietly = TRUE)
+  require("magrittr", quietly = TRUE, warn.conflicts = FALSE)
 
   f <- function () input %<>% base::summary(meter == "MAC004929")
-  e <- new.env()
+  e <- new.env(parent = globalenv())
+  e$input <- 1
   d <- defer_(f, .caller_env = e, .extract = TRUE, .verbosity = 2)
 
   v <- extract_dependencies(d)
-  str(v)
   expect_equal(nrow(v), 2)
   expect_setequal(v$pkg, c("base", "magrittr"))
+
+  v <- extract_variables(d)
+  expect_named(v, 'input')
 })
