@@ -94,11 +94,11 @@ extract_dependencies <- function (df)
 
 
 
-#' `list_dependencies` returns a `list` of variables referenced in any
+#' `extract_parameters` returns a `list` of variables referenced in any
 #' of the packaged functions, that could be found in the caller
 #' environment at the time of packaging.
 #'
-#' @return `list_dependencies` returns a named list.
+#' @return `extract_parameters` returns a named list.
 #'
 #' @export
 #' @rdname extract
@@ -108,4 +108,21 @@ extract_variables <- function (df)
   stopifnot(is_deferred(df))
   ee <- environment(df)
   return(ee$variables)
+}
+
+
+#' `extract_parameters` returns a `list` of values which appear to be
+#' parameters: either scalars used in the code or referenced scalar
+#' variables.
+#'
+#' @return `extract_parameters` returns a named list.
+#'
+#' @export
+#' @rdname extract
+#'
+extract_parameters <- function (df)
+{
+  stopifnot(is_deferred(df))
+  ee <- environment(df)
+  return(ee$parameters)
 }

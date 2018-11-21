@@ -15,6 +15,8 @@
 #'
 #' @return A \code{deferred} function object.
 #'
+#' @seealso augment
+#'
 #' @export
 #' @rdname defer
 #'
@@ -92,6 +94,7 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
   exec_env$library_deps  <- processor$library_deps
   exec_env$variables     <- processor$variables
   exec_env$arguments     <- list()
+  exec_env$parameters    <- processor$parameters
 
   formals(executor) <- formals(deps$entry)
   if (match("...", names(formals(executor)), 0) == 0) {
@@ -104,10 +107,9 @@ defer_ <- function (entry, ..., .dots = list(), .extract = FALSE, .caller_env = 
 }
 
 
-#' @rdname defer
 #' @export
-#' @import rlang
-caller_env <- caller_env
+#' @importFrom rlang caller_env
+rlang::caller_env
 
 
 #' @description \code{is_deferred} verifies if the given object
@@ -123,6 +125,8 @@ is_deferred <- function (x) inherits(x, 'deferred')
 
 
 
+#' Manipulate a deferred function.
+#'
 #' @description Pass a value in place of an argument. This function will
 #' modify the input object.
 #'
@@ -133,12 +137,11 @@ is_deferred <- function (x) inherits(x, 'deferred')
 #'         original function object is also modified.
 #'
 #' @export
-#' @rdname defer
 #' @importFrom rlang env_clone
 #'
 #' @examples
 #' d <- defer(function(a, b, c) return(a+b+c))
-#' augment(d, a = 1, b = 2, c = 3)
+#' d <- augment(d, a = 1, b = 2, c = 3)
 #' d()
 #' #> 6
 #'
@@ -217,8 +220,11 @@ is_closure <- function (x, caller_env) {
     !identical(environment(x), globalenv())
 }
 
-# symbol
-is_magrittr_pipe <- function (x) magrittr:::is_pipe(x)
+# symbol; copied from magrittr:::is_pipe
+is_magrittr_pipe <- function (x) {
+  identical(x, quote(`%>%`)) || identical(x, quote(`%T>%`)) ||
+    identical(x, quote(`%<>%`)) || identical(x, quote(`%$%`))
+}
 # operator function object
 is_magrittr_impl <- function (x) identical(x, magrittr::`%>%`)|| identical(x, magrittr::`%<>%`)
 # runtime
@@ -233,7 +239,7 @@ is_assignment <- function (x) identical(x[[1]], bquote(`<-`))
 
 library(R6)
 
-#' @importFrom rlang caller_env
+#' @importFrom rlang caller_env is_scalar_atomic
 #' @importFrom R6 R6Class
 DependencyProcessor<- R6::R6Class("DependencyProcessor",
   public = list(
@@ -241,6 +247,7 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
                                stringsAsFactors = FALSE),
     function_deps = list(),
     variables = list(),
+    parameters = list(),
 
     initialize = function (deps, caller_env) {
       private$deps <- deps
@@ -330,8 +337,16 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
     },
 
     # https://stackoverflow.com/questions/14276728/finding-the-names-of-all-functions-in-an-r-expression/14295659#14295659
-    process_body = function (x, in_pipe = FALSE) {
-      recurse       <- function (x, in_pipe = FALSE) sort(unique(as.character(unlist(lapply(x, private$process_body, in_pipe)))))
+    process_body = function (x, in_pipe = FALSE, argname = "") {
+      # TODO in order to extract names to which constants and variables are assigned to, here is one place
+      #      the inner lapply in recurse()
+      recurse <- function (x, in_pipe = FALSE) {
+        # TODO does not work for positional args
+        names <- if (is.null(names(x))) rep("", length(x)) else names(x)
+        sort(unique(as.character(unlist(Map(f = function (node, name) {
+          private$process_body(node, in_pipe = in_pipe, argname = name)
+        }, node = x, name = names)))))
+      }
       already_found <- function (x) (f_name %in% c(names(self$function_deps), self$library_deps$fun, names(self$deps)))
 
       # if a name but in the context of a pipe expression, treat it like a function call,
@@ -342,6 +357,8 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
 
       # it will be either a name, an assignment, a call or something recursive
       if (is.name(x)) {
+        private$verbose("name")
+
         v_name <- as.character(x)
         if (!nchar(v_name) || !exists(v_name, envir = private$caller_env, inherits = TRUE)) return()
 
@@ -350,21 +367,48 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
         #if (!is.numeric(candidate) && !is.character(candidate)) return()
         if (is.function(candidate)) return()
 
-        self$variables[[v_name]] <- get(v_name, envir = private$caller_env)
+        v_value <- get(v_name, envir = private$caller_env)
+        self$variables[[v_name]] <- v_value
         private$verbose("  - adding candidate variable: ", v_name)
+
+        if (is_scalar_atomic(v_value)) {
+          if (nchar(argname)) {
+            self$parameters[[argname]] <- x # TODO what if parameter is actually a symbol?
+          } else {
+            self$parameters <- append(self$parameters, x)
+          }
+        }
+      }
+      else if (is_scalar_atomic(x)) {
+        if (nchar(argname)) {
+          self$parameters[[argname]] <- x
+        } else {
+          self$parameters <- append(self$parameters, x)
+        }
       }
       else if (is_assignment(x)) {
+        private$verbose("assignment")
+
+        # TODO here is another place where argument name has to be extracted from
         return(recurse(x[-(1:2)]))
       }
       else if (is_colon(x)) {
+        private$verbose("colon ", deparse(x))
+
+        # TODO seems that functions might mask one another here; the package pointed
+        #      to by x should be loaded upon execution but the function itself shouldn't
+        #      be loaded into the shim environment as it is clearly conflicting with
+        #      something else if it needs the :: or ::: operator to be recognized
         f_name <- deparse(x[[3]])
         f_obj <- eval(x, envir = private$caller_env)
         private$process_candidate(f_name, f_obj)
       }
       else if (is.call(x) && is.name(x[[1]])) {
+        private$verbose("single-name call")
+
         f_name <- deparse(x[[1]])
         if (!already_found(f_name) && exists(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)) {
-          f_obj <- get(f_name, envir = private$caller_env)
+          f_obj <- get(f_name, envir = private$caller_env, mode = 'function', inherits = TRUE)
           private$process_candidate(f_name, f_obj)
         }
 
@@ -376,8 +420,10 @@ DependencyProcessor<- R6::R6Class("DependencyProcessor",
           recurse(x[-1], FALSE)
         }
       }
-      else if (is.recursive(x))
+      else if (is.recursive(x)) {
+        private$verbose("recursive")
         recurse(x)
+      }
     },
 
     process_candidate = function (name, fun) {

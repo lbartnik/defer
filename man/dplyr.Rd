@@ -5,9 +5,18 @@
 \alias{do_.parallel}
 \title{Run grouped \code{do} in parallel.}
 \usage{
-parallelize(x)
+parallelize(.data)
 
-do_.parallel(.data, ..., env = parent.frame(), .dots)
+do_.parallel(.data, ..., env = parent.frame(), .dots = list())
+}
+\arguments{
+\item{.data}{data object transformed with [parallelize]}
+
+\item{...}{expressions to apply to each group; see [dplyr::do]}
+
+\item{env}{the environment in which functions should be evaluated; see [dplyr::do]}
+
+\item{.dots}{pair/values of expressions coercible to lazy objects; see [dplyr::do]}
 }
 \description{
 Injects execution of \code{\link[dplyr]{do}} and if \code{.data} is

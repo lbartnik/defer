@@ -4,6 +4,8 @@ context("client")
 test_that("rserve manager", {
   skip_if_not_installed('RSclient')
   skip_if_not_installed('Rserve')
+  skip_on_appveyor()
+  skip_on_travis()
 
   Rserve::Rserve(wait = FALSE, args = "--no-save --RS-enable-control --slave")
   Sys.sleep(0.2)

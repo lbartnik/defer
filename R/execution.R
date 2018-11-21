@@ -3,7 +3,7 @@
 executor <- function (...)
 {
   # fist save the arguments
-  args <- c(as.list(environment()), list(...))
+  args <- base::c(as.list(environment()), list(...))
 
   ee <- parent.env(environment())
   stopifnot(exists("function_deps", envir = ee, inherits = FALSE),

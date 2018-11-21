@@ -22,6 +22,7 @@ Suggests:
   Rserve,
   RSclient
 Imports:
+  jsonlite,
   rlang,
   R6
 Collate:
@@ -30,4 +31,5 @@ Collate:
   'extra.R'
   'packaging.R'
 VignetteBuilder: knitr
-RoxygenNote: 6.0.1
+Encoding: UTF-8
+RoxygenNote: 6.1.0

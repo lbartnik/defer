@@ -7,6 +7,8 @@
 #' @param deferred A deferred function wrapper.
 #' @param ... Parameters for \code{deferred}, must be named.
 #'
+#' @importFrom utils head tail
+#'
 #' @export
 #'
 #' @examples
@@ -19,7 +21,7 @@
 #'
 opencpu <- function (ocpu_url, deferred, ...)
 {
-  if (!require(httr) || !require(jsonlite)) {
+  if (!requireNamespace('httr') || !requireNamespace('jsonlite')) {
     stop('httr and jsonlite packages are required to ",
          "run a deferred function via opencpu', call. = FALSE)
   }
@@ -73,7 +75,7 @@ opencpu <- function (ocpu_url, deferred, ...)
 #'
 remote_function <- function (base64string)
 {
-  stopifnot(require(jsonlite))
+  stopifnot(requireNamespace('jsonlite', quietly = TRUE))
   deferred <- unserialize(jsonlite::base64_dec(base64string))
   ans <- tryCatch({
     deferred()
@@ -91,19 +93,25 @@ remote_function <- function (base64string)
 #' @importFrom rlang caller_env
 #' @export
 #'
-parallelize <- function (x)
+parallelize <- function (.data)
 {
-  class(x) <- c("parallel", class(x))
-  attr(x, "deferred_env") <- globalenv()
-  x
+  class(.data) <- c("parallel", class(.data))
+  attr(.data, "deferred_env") <- globalenv()
+  .data
 }
-
 
 
 #' Run grouped \code{do} in parallel.
 #'
 #' Injects execution of \code{\link[dplyr]{do}} and if \code{.data} is
 #' groupped, executes the operation in parallel.
+#'
+#' @param .data data object transformed with [parallelize]
+#' @param ... expressions to apply to each group; see [dplyr::do]
+#' @param env the environment in which functions should be evaluated; see [dplyr::do]
+#' @param .dots pair/values of expressions coercible to lazy objects; see [dplyr::do]
+#'
+#' @importFrom rlang quos
 #'
 #' @rdname dplyr
 #' @export
@@ -119,22 +127,23 @@ parallelize <- function (x)
 #'   })
 #' }
 #'
-do_.parallel <- function (.data, ..., env = parent.frame(), .dots)
+do_.parallel <- function (.data, ..., env = parent.frame(), .dots = list())
 {
+  stopifnot(requireNamespace('dplyr'))
   stopifnot(is.environment(attr(.data, 'deferred_env')))
 
-  args <- lazyeval::all_dots(.dots, ...)
+  args <- c(quos(...), .dots)
   index <- attr(.data, "indices")
   n <- length(index)
 
   # if not groupped fall back on dplyr
   if (!inherits(.data, "grouped_df") || n == 0) {
     class(.data) <- setdiff(class(.data), "parallel")
-    do_(.data, env = env, .dots = args)
+    dplyr::do_(.data, env = env, .dots = args)
   }
 
   # follows dplyr:::do_.groupped_df
-  group_data <- ungroup(.data)
+  group_data <- dplyr::ungroup(.data)
   labels <- attr(.data, "labels")
   m <- length(args)
 
@@ -158,7 +167,7 @@ do_.parallel <- function (.data, ..., env = parent.frame(), .dots)
 
   out <- replicate(m, vector("list", n), simplify = FALSE)
   names(out) <- names(args)
-  p <- progress_estimated(n * m, min_time = 2)
+  p <- dplyr::progress_estimated(n * m, min_time = 2)
   for (`_i` in seq_len(n)) {
     this_group <- group_data[index[[`_i`]] + 1L, , drop = FALSE]
     for (j in seq_len(m)) {
@@ -170,13 +179,14 @@ do_.parallel <- function (.data, ..., env = parent.frame(), .dots)
 
   manager$wait_all()
 
-  named <- dplyr:::named_args(args)
-  if (!named) {
-    dplyr:::label_output_dataframe(labels, out, groups(.data))
-  }
-  else {
-    dplyr:::label_output_list(labels, out, groups(.data))
-  }
+  stop('broken')
+#  named <- dplyr:::named_args(args)
+#  if (!named) {
+#    dplyr:::label_output_dataframe(labels, out, groups(.data))
+#  }
+#  else {
+#    dplyr:::label_output_list(labels, out, groups(.data))
+#  }
 }
 
 
